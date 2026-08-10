@@ -1,0 +1,18 @@
+[Unit]
+Description=Life Replay - text-mode life simulation server
+After=network.target
+
+[Service]
+Type=simple
+# 部署脚本会把项目放到 /opt/life_sim；如放在别处请同步修改这两行
+WorkingDirectory=/opt/life_sim
+ExecStart=/usr/bin/python3 /opt/life_sim/server.py
+Environment=PORT=8080
+Restart=always
+RestartSec=3
+# 以非特权用户运行；如需 80 端口请配合 nginx 反代或 setcap
+User=www-data
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target
