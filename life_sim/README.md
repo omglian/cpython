@@ -107,18 +107,24 @@ gcloud compute instances add-tags <实例名> --tags=lifesim --zone=<可用区>
 
 ## 事件语料采集（crawler）
 
-模拟中的"随机事件"来自 `data/` 语料库（目前 680+ 条：86 条手工创作
-+ 600 条真实语料蒸馏导入）——事件按年龄过滤、按人格加权抽取（如高
-开放性的人更容易触发"捡起爱好"类事件），第三人称金句被包装成"刷到
-留言"氛围事件（权重压低防刷屏），服务器按文件 mtime 热加载，爬虫
-更新后无需重启。
+模拟中的"随机事件"来自 `data/` 语料库（目前 5100+ 条）。事件分两类：
+
+* **亲历事件**（150 条，手工创作）—— 真正发生在你身上的事，人生的主体
+* **氛围事件**（5000 条，真实语料蒸馏）—— "你刷到一句话……"，调味用
+
+抽取时先按**类型配额**（氛围固定约 22%）再在类型内加权，所以金句语料
+涨到几千条也不会把亲历事件淹没；事件同时按年龄过滤、按人格加权
+（高开放性的人更容易触发"捡起爱好"类事件）。服务器按文件 mtime 热加载，
+爬虫更新后无需重启。
 
 ```bash
 cd life_sim
 python3 -m crawler.run hn --limit 50            # Hacker News 官方公开 API
 python3 -m crawler.run rss --url <feed地址>      # 任意 RSS/Atom 源
+python3 -m crawler.run hitokoto --path <克隆路径> # 一言开源句子库
 python3 -m crawler.run import --file 留言.txt    # 本地导入(txt/csv/jsonl)
 python3 -m crawler.run stats                     # 语料库统计
+python3 tools/build_standalone.py                # 把新语料打包进单机版页面
 ```
 
 在谷歌云 VM 上可配 cron 每日自动采集（部署脚本末尾有现成配置）。

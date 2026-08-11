@@ -141,6 +141,32 @@ class TestEventCorpus(unittest.TestCase):
             self.assertEqual(draw(rng, corpus, 70, traits)["id"], "old")
         self.assertIsNone(draw(rng, corpus, 40, traits))
 
+    def test_ambient_quota_holds_regardless_of_corpus_size(self):
+        import random
+        # 极端配比：1 条亲历 vs 2000 条氛围。没有配额的话氛围会淹没一切。
+        corpus = [{"id": "n1", "text": "n", "domain": "misc", "min_age": 0,
+                   "max_age": 100, "weight": 1.0, "kind": "narrative"}]
+        corpus += [{"id": "a%04d" % i, "text": "a", "domain": "misc",
+                    "min_age": 0, "max_age": 100, "weight": 1.0,
+                    "kind": "ambient"} for i in range(2000)]
+        rng = random.Random(3)
+        traits = {"O": 50, "C": 50, "E": 50, "A": 50, "N": 50}
+        ambient = sum(1 for _ in range(2000)
+                      if draw(rng, corpus, 30, traits)["kind"] == "ambient")
+        share = ambient / 2000.0
+        self.assertTrue(0.17 < share < 0.27,
+                        "氛围事件占比应稳定在配额附近，实际 %.2f" % share)
+
+    def test_draw_falls_back_when_kind_missing(self):
+        import random
+        # 只有氛围事件时，亲历事件的抽取请求应回退而不是返回 None
+        corpus = [{"id": "a1", "text": "a", "domain": "misc", "min_age": 0,
+                   "max_age": 100, "weight": 1.0, "kind": "ambient"}]
+        rng = random.Random(5)
+        traits = {"O": 50, "C": 50, "E": 50, "A": 50, "N": 50}
+        for _ in range(20):
+            self.assertIsNotNone(draw(rng, corpus, 30, traits))
+
     def test_trait_bias_shifts_odds(self):
         import random
         corpus = [
@@ -193,6 +219,22 @@ class TestDistill(unittest.TestCase):
 
     def test_blocklist_filtered(self):
         self.assertIsNone(distill.distill("我真的好想去死，一切都没有意义了"))
+
+    def test_aphorism_not_treated_as_lived_event(self):
+        # 第一人称的格言不是"发生过的事"，应走氛围包装
+        ev = distill.distill("我一直以为人是慢慢变老的，其实不是")
+        self.assertEqual(ev["kind"], "ambient")
+
+    def test_concrete_first_person_is_narrative(self):
+        ev = distill.distill("我昨天收到了大学室友寄来的明信片，上面只写了四个字")
+        self.assertEqual(ev["kind"], "narrative")
+        self.assertIn("你", ev["text"])
+
+    def test_quote_source_never_yields_narrative(self):
+        # 句子库来源即使是具体的第一人称叙述也只做氛围事件
+        ev = distill.distill("我昨天收到了一封信，读了很久",
+                             allow_narrative=False)
+        self.assertEqual(ev["kind"], "ambient")
 
     def test_length_filter(self):
         self.assertIsNone(distill.distill("太短"))

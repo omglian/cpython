@@ -61,6 +61,12 @@ def main(argv=None):
     p_rss.add_argument("--url", required=True)
     p_rss.add_argument("--limit", type=int, default=50)
 
+    p_hito = sub.add_parser("hitokoto", help="一言开源句子库（需先 git clone）")
+    p_hito.add_argument("--path", required=True,
+                        help="hitokoto-osc/sentences-bundle 本地克隆路径")
+    p_hito.add_argument("--categories", default=None,
+                        help="类目字母，如 jfe（默认取全部合适类目）")
+
     p_imp = sub.add_parser("import", help="本地文件导入")
     p_imp.add_argument("--file", required=True)
     p_imp.add_argument("--source", default=None,
@@ -86,12 +92,17 @@ def main(argv=None):
                                    with_comments=not args.no_comments)
     elif args.cmd == "rss":
         items = sources.rss(args.url, limit=args.limit)
+    elif args.cmd == "hitokoto":
+        cats = set(args.categories) if args.categories else None
+        items = sources.hitokoto(args.path, categories=cats)
     else:
         items = sources.local(args.file)
         if args.source:
             items = ((args.source, text) for _tag, text in items)
 
-    events = distill.distill_all(items)
+    # 语录/句子类来源只产出氛围事件，不冒充玩家亲历经历
+    events = distill.distill_all(items,
+                                 allow_narrative=(args.cmd != "hitokoto"))
     added, total = merge_and_save(args.out, events)
     print("蒸馏出 %d 条事件，新增 %d 条（去重后），语料库现有 %d 条。"
           % (len(events), added, total))

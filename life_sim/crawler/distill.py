@@ -130,8 +130,39 @@ def _stable_hash(text):
     return int(hashlib.sha256(text.encode("utf-8")).hexdigest()[:8], 16)
 
 
-def to_second_person(text):
-    if re.match(r"^(我|我们)", text) or " I " in " %s " % text:
+# 具体事件的语言信号：有时间锚点或完成态动作，才算"发生过的事"。
+# 只靠第一人称判断会把格言误当经历（"我一直以为人是慢慢变老的"不是事件）。
+_TIME_MARKERS = [
+    "今天", "昨天", "那天", "上周", "上个月", "去年", "前几天", "刚才",
+    "早上", "中午", "下午", "晚上", "深夜", "凌晨", "今年", "那年", "当时",
+]
+_ACTION_VERBS = [
+    "去了", "买了", "吃了", "喝了", "看到", "见到", "遇到", "收到", "接到",
+    "发现", "捡到", "回了", "走了", "睡了", "醒了", "哭了", "笑了", "写了",
+    "做了", "打了", "拍了", "找到", "路过", "报名", "参加", "搬", "养了",
+]
+# 格言腔：泛指主语 + 断言口吻，即便是第一人称也不是事件
+_APHORISM_MARKERS = [
+    "其实", "永远", "应该", "人生", "生命", "世界上", "所有人", "每个人",
+    "总是要", "才是", "本来就", "无非", "不过是",
+]
+
+
+def _is_concrete_event(text):
+    if any(m in text for m in _APHORISM_MARKERS):
+        return False
+    return (any(m in text for m in _TIME_MARKERS)
+            or any(v in text for v in _ACTION_VERBS))
+
+
+def to_second_person(text, allow_narrative=True):
+    """返回 (叙事文本, 是否为亲历事件)。
+
+    allow_narrative=False 时强制走氛围包装——用于一言这类"句子库"
+    来源：里面即使是第一人称也是格言警句，不是某个人真实发生过的事。
+    """
+    first_person = re.match(r"^(我|我们)", text) or " I " in " %s " % text
+    if allow_narrative and first_person and _is_concrete_event(text):
         converted = text.replace("我们", "你们").replace("我", "你")
         converted = re.sub(r"\bI\b", "you", converted)
         return converted, True
@@ -150,8 +181,12 @@ MIN_LEN, MAX_LEN = 8, 160
 _CONTENT_BLOCKLIST = ["自杀", "轻生", "割腕", "去死", "上吊", "烧炭", "自残"]
 
 
-def distill(raw_text, source="import"):
-    """单条原始文本 → 事件模板 dict；不合格返回 None。"""
+def distill(raw_text, source="import", allow_narrative=True):
+    """单条原始文本 → 事件模板 dict；不合格返回 None。
+
+    allow_narrative=False 用于句子/语录类来源：产出的事件一律是
+    "刷到一句话"的氛围事件，不冒充玩家的亲历经历。
+    """
     text = clean(raw_text)
     if not (MIN_LEN <= len(text) <= MAX_LEN):
         return None
@@ -160,7 +195,7 @@ def distill(raw_text, source="import"):
     domain = classify_domain(text)
     valence = score_valence(text)
     min_age, max_age = guess_age_range(text)
-    narrative, direct = to_second_person(text)
+    narrative, direct = to_second_person(text, allow_narrative=allow_narrative)
 
     event = {
         "id": "evt_" + hashlib.sha256(
@@ -170,9 +205,10 @@ def distill(raw_text, source="import"):
         "valence": valence,
         "min_age": min_age,
         "max_age": max_age,
-        # 直接叙事(亲历感)权重远高于氛围事件(刷到留言)：
-        # 语料库里金句数量庞大，压低单条权重防止时间线被引句刷屏
-        "weight": 1.0 if direct else 0.15,
+        # kind 决定事件走哪条抽取配额（见 engine/events.py）：
+        # 第一人称改写后是"亲历事件"，第三人称金句是"氛围事件"
+        "kind": "narrative" if direct else "ambient",
+        "weight": 1.0 if direct else 0.5,
         "effects": {"happiness": valence * 3,
                     "stress": -valence * 2 if valence else 1},
         "source": source,
@@ -180,11 +216,11 @@ def distill(raw_text, source="import"):
     return event
 
 
-def distill_all(items):
+def distill_all(items, allow_narrative=True):
     """(source, text) 迭代器 → 去重后的事件列表。"""
     seen, out = set(), []
     for source, raw in items:
-        ev = distill(raw, source=source)
+        ev = distill(raw, source=source, allow_narrative=allow_narrative)
         if ev and ev["id"] not in seen:
             seen.add(ev["id"])
             out.append(ev)

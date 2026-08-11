@@ -4,6 +4,7 @@
 只包含合规来源：
 * hackernews — Hacker News 官方公开 API (Firebase)，含 Ask HN 帖与评论
 * rss        — 任意 RSS 2.0 / Atom 订阅源（标题 + 摘要）
+* hitokoto   — 一言开源句子库（GitHub 公开仓库，含网易云热评等）
 * local      — 本地文件导入 (.txt 每行一条 / .csv / .jsonl)，
                用来喂你自己有权导出的任何平台数据
 """
@@ -91,6 +92,47 @@ def rss(url, limit=50):
             if el is not None and el.text:
                 yield "rss", _strip_html(el.text)
         count += 1
+
+
+# ---------------------------------------------------------------------------
+# 一言开源句子库 (hitokoto-osc/sentences-bundle)
+# ---------------------------------------------------------------------------
+
+# 只取贴近"真实生活留言"语感的类目；动画/漫画/游戏/诗词等与本作氛围不符
+HITOKOTO_CATEGORIES = {
+    "j": "ncm",         # 网易云音乐热评
+    "f": "net",         # 来自网络
+    "e": "original",    # 原创
+    "k": "philosophy",  # 哲学
+    "l": "funny",       # 抖机灵
+    "d": "literature",  # 现代文学：小说、散文
+}
+
+HITOKOTO_REPO = "https://github.com/hitokoto-osc/sentences-bundle"
+
+
+def hitokoto(path, categories=None):
+    """读取本地克隆的一言句子库。
+
+    path: 仓库根目录（需先 git clone HITOKOTO_REPO）
+    categories: 可选的类目字母集合，默认取 HITOKOTO_CATEGORIES 全部
+    """
+    wanted = categories or HITOKOTO_CATEGORIES.keys()
+    sent_dir = os.path.join(path, "sentences")
+    for letter in sorted(wanted):
+        tag = HITOKOTO_CATEGORIES.get(letter, "hitokoto")
+        fname = os.path.join(sent_dir, "%s.json" % letter)
+        if not os.path.exists(fname):
+            continue
+        with open(fname, encoding="utf-8", errors="replace") as f:
+            try:
+                data = json.load(f)
+            except ValueError:
+                continue
+        for item in data:
+            text = item.get("hitokoto") if isinstance(item, dict) else None
+            if text:
+                yield tag, text
 
 
 # ---------------------------------------------------------------------------
