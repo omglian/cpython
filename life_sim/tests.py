@@ -186,7 +186,13 @@ class TestDistill(unittest.TestCase):
     def test_third_person_wrapped(self):
         ev = distill.distill("成年人的崩溃都是从借钱开始的")
         self.assertIsNotNone(ev)
-        self.assertIn("留言", ev["text"])
+        # 第三人称金句应被包装为氛围事件：原句放进「」里
+        self.assertIn("「成年人的崩溃都是从借钱开始的」", ev["text"])
+        # 同一句话必须永远得到同一个包装（确定性）
+        self.assertEqual(ev["text"], distill.distill("成年人的崩溃都是从借钱开始的")["text"])
+
+    def test_blocklist_filtered(self):
+        self.assertIsNone(distill.distill("我真的好想去死，一切都没有意义了"))
 
     def test_length_filter(self):
         self.assertIsNone(distill.distill("太短"))

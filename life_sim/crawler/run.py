@@ -63,6 +63,8 @@ def main(argv=None):
 
     p_imp = sub.add_parser("import", help="本地文件导入")
     p_imp.add_argument("--file", required=True)
+    p_imp.add_argument("--source", default=None,
+                       help="来源标签(默认 local)，用于区分语料出处")
 
     sub.add_parser("stats", help="语料库统计")
 
@@ -86,6 +88,8 @@ def main(argv=None):
         items = sources.rss(args.url, limit=args.limit)
     else:
         items = sources.local(args.file)
+        if args.source:
+            items = ((args.source, text) for _tag, text in items)
 
     events = distill.distill_all(items)
     added, total = merge_and_save(args.out, events)

@@ -19,11 +19,11 @@ DOMAINS = {"career", "romance", "family", "health", "finance",
 _TRAIT_KEYS = {"O", "C", "E", "A", "N"}
 _EFFECT_KEYS = {"happiness", "stress", "health", "wealth"}
 
-DEFAULT_PATH = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-    "data", "events.json")
+DATA_DIR = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data")
+DEFAULT_PATH = os.path.join(DATA_DIR, "events.json")
 
-_cache = {}  # path -> (mtime, corpus)
+_cache = {}  # key -> (version, corpus)
 
 
 def _valid(ev):
@@ -51,24 +51,57 @@ def _valid(ev):
     return True
 
 
-def load_corpus(path=None):
-    """带 mtime 缓存的语料加载；文件缺失或损坏时返回空列表。"""
-    path = path or DEFAULT_PATH
-    try:
-        mtime = os.stat(path).st_mtime_ns
-    except OSError:
-        return []
-    cached = _cache.get(path)
-    if cached and cached[0] == mtime:
-        return cached[1]
+def _read_events(path):
     try:
         with open(path, encoding="utf-8") as f:
             data = json.load(f)
     except (OSError, ValueError):
         return []
-    corpus = [ev for ev in data if _valid(ev)] if isinstance(data, list) else []
+    return [ev for ev in data if _valid(ev)] if isinstance(data, list) else []
+
+
+def load_corpus(path=None):
+    """带 mtime 缓存的语料加载；文件缺失或损坏时返回空列表。
+
+    path 为 None 时进入目录模式：合并 data/ 下所有 .json 文件
+    （按 id 去重），任何一个文件变化都会触发重新加载。
+    """
+    if path is not None:
+        try:
+            mtime = os.stat(path).st_mtime_ns
+        except OSError:
+            return []
+        cached = _cache.get(path)
+        if cached and cached[0] == mtime:
+            return cached[1]
+        corpus = sorted(_read_events(path), key=lambda ev: ev["id"])
+        _cache[path] = (mtime, corpus)
+        return corpus
+
+    try:
+        files = sorted(
+            os.path.join(DATA_DIR, name) for name in os.listdir(DATA_DIR)
+            if name.endswith(".json"))
+    except OSError:
+        return []
+    version = []
+    for f in files:
+        try:
+            version.append((f, os.stat(f).st_mtime_ns))
+        except OSError:
+            pass
+    version = tuple(version)
+    cached = _cache.get(DATA_DIR)
+    if cached and cached[0] == version:
+        return cached[1]
+    corpus, seen = [], set()
+    for f in files:
+        for ev in _read_events(f):
+            if ev["id"] not in seen:
+                seen.add(ev["id"])
+                corpus.append(ev)
     corpus.sort(key=lambda ev: ev["id"])  # 稳定顺序保证抽取可复现
-    _cache[path] = (mtime, corpus)
+    _cache[DATA_DIR] = (version, corpus)
     return corpus
 
 

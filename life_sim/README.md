@@ -40,7 +40,11 @@ life_sim/
 │   ├── sources.py       # 来源适配器：HN 官方 API / RSS / 本地导入
 │   ├── distill.py       # 蒸馏器：清洗→去隐私→分类→事件模板
 │   └── run.py           # 命令行入口（python3 -m crawler.run）
-├── data/events.json     # 事件语料库（种子 41 条，爬虫持续追加）
+├── data/                # 事件语料库（目录下所有 .json 自动合并加载）
+│   ├── events.json          # 手工种子事件
+│   ├── events_extra.json    # 手工小事件扩充
+│   ├── events_imported.json # 真实语料蒸馏导入（见 SOURCES.md）
+│   └── SOURCES.md           # 语料来源与许可说明
 ├── static/
 │   ├── index.html       # 文字版页面（终端风格，调用后端 API）
 │   └── standalone.html  # 单机版：引擎完整移植为 JS，双击即玩，零后端
@@ -103,9 +107,11 @@ gcloud compute instances add-tags <实例名> --tags=lifesim --zone=<可用区>
 
 ## 事件语料采集（crawler）
 
-模拟中的"随机事件"来自 `data/events.json` 语料库——由真实网络语料
-蒸馏而成，事件按年龄过滤、按人格加权抽取（如高开放性的人更容易触发
-"捡起爱好"类事件），服务器按文件 mtime 热加载，爬虫更新后无需重启。
+模拟中的"随机事件"来自 `data/` 语料库（目前 680+ 条：86 条手工创作
++ 600 条真实语料蒸馏导入）——事件按年龄过滤、按人格加权抽取（如高
+开放性的人更容易触发"捡起爱好"类事件），第三人称金句被包装成"刷到
+留言"氛围事件（权重压低防刷屏），服务器按文件 mtime 热加载，爬虫
+更新后无需重启。
 
 ```bash
 cd life_sim

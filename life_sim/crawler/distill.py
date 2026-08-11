@@ -112,15 +112,31 @@ def guess_age_range(text):
 
 
 # ---------------------------------------------------------------------------
-# 人称改写：以"我"开头的叙述改为"你"；否则包装成"刷到留言"氛围事件
+# 人称改写：以"我"开头的叙述改为"你"；否则包装成"刷到留言"氛围事件。
+# 包装模板按文本哈希确定性选择——同一句话永远得到同一个事件，保证可复现。
 # ---------------------------------------------------------------------------
+
+_WRAPPERS = [
+    "你刷到一条陌生人的留言：「%s」，恍惚间想到了自己的生活。",
+    "深夜的评论区里，一句话停住了你的拇指：「%s」。",
+    "歌单随机到一首老歌，热评第一写着：「%s」。你单曲循环了一晚上。",
+    "朋友转发来一句话：「%s」。你回了个表情，心里却记下了。",
+    "你在旧笔记本的扉页看到自己抄过的一句话：「%s」，已经想不起是什么时候抄的了。",
+    "地铁上你瞥见邻座手机屏幕上的一句签名：「%s」。到站了你还在想。",
+]
+
+
+def _stable_hash(text):
+    return int(hashlib.sha256(text.encode("utf-8")).hexdigest()[:8], 16)
+
 
 def to_second_person(text):
     if re.match(r"^(我|我们)", text) or " I " in " %s " % text:
         converted = text.replace("我们", "你们").replace("我", "你")
         converted = re.sub(r"\bI\b", "you", converted)
         return converted, True
-    wrapped = "你刷到一条陌生人的留言：「%s」，恍惚间想到了自己的生活。" % text
+    quoted = text.rstrip("。.!！?？~；;，,")  # 引号内去掉句尾标点，避免「。」。
+    wrapped = _WRAPPERS[_stable_hash(text) % len(_WRAPPERS)] % quoted
     return wrapped, False
 
 
@@ -130,11 +146,16 @@ def to_second_person(text):
 
 MIN_LEN, MAX_LEN = 8, 160
 
+# 内容安全过滤：涉及自我伤害等的语料不进入游戏事件池
+_CONTENT_BLOCKLIST = ["自杀", "轻生", "割腕", "去死", "上吊", "烧炭", "自残"]
+
 
 def distill(raw_text, source="import"):
     """单条原始文本 → 事件模板 dict；不合格返回 None。"""
     text = clean(raw_text)
     if not (MIN_LEN <= len(text) <= MAX_LEN):
+        return None
+    if any(term in text for term in _CONTENT_BLOCKLIST):
         return None
     domain = classify_domain(text)
     valence = score_valence(text)
@@ -149,8 +170,9 @@ def distill(raw_text, source="import"):
         "valence": valence,
         "min_age": min_age,
         "max_age": max_age,
-        # 直接叙事(亲历感)权重高于氛围事件(刷到留言)
-        "weight": 1.0 if direct else 0.5,
+        # 直接叙事(亲历感)权重远高于氛围事件(刷到留言)：
+        # 语料库里金句数量庞大，压低单条权重防止时间线被引句刷屏
+        "weight": 1.0 if direct else 0.15,
         "effects": {"happiness": valence * 3,
                     "stress": -valence * 2 if valence else 1},
         "source": source,
