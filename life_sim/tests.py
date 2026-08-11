@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """life_sim 冒烟测试：python3 tests.py 直接运行，全绿即通过。"""
 
+import json
 import os
 import tempfile
 import unittest
@@ -102,6 +103,133 @@ class TestSimulation(unittest.TestCase):
             self.assertGreaterEqual(sim.wealth, 0)
             year += 1
             sim.age += 1
+
+
+class TestChineseNumerals(unittest.TestCase):
+
+    def test_common_forms(self):
+        from engine.cn_number import cn_to_int
+        cases = {
+            "二十八": 28, "三十": 30, "十八": 18, "廿八": 28, "卅五": 35,
+            "一百零五": 105, "两百": 200, "零": 0, "28": 28, "三十二": 32,
+            "九十九": 99, "十": 10, "五": 5, "两": 2, "一百": 100,
+        }
+        for text, want in cases.items():
+            self.assertEqual(cn_to_int(text), want, "%s 应为 %d" % (text, want))
+
+    def test_rejects_non_numerals(self):
+        from engine.cn_number import cn_to_int
+        for text in ("岁月", "", "abc", None, "三十岁"):
+            self.assertIsNone(cn_to_int(text), "%r 应无法解析" % (text,))
+
+
+class TestAgeExtraction(unittest.TestCase):
+    """年龄自动识别。分两组：识别能力，以及更重要的——不误判。"""
+
+    YEAR = 2026
+
+    def age(self, text):
+        from engine.age import extract_age
+        return extract_age(text, self.YEAR)["age"]
+
+    def test_recognizes_common_forms(self):
+        cases = {
+            "我今年28岁，在深圳做程序员。": 28,
+            "我今年二十八。": 28,
+            "虚岁三十，周岁二十九。": 29,
+            "年龄：29": 29,
+            "我今年二十七八岁。": 28,
+            "今年三十有二。": 32,
+            "刚满三十岁。": 30,
+            "上个月刚过完30岁生日。": 30,
+            "我1995年出生在一个小县城。": 31,
+            "我是95年的。": 31,
+            "生于一九八八年。": 38,
+            "快30了还是单身。": 29,
+            "我三十出头。": 32,
+            "去年29岁，今年换了工作。": 30,
+            "明年就31了。": 30,
+            "再过两年我就40了。": 38,
+            "本人男，32，北京。": 32,
+            "2008年我18岁，第一次出远门。": 36,
+            "2010年参加高考。": 34,
+            "我上大三。": 21,
+            "我上五年级了。": 11,
+            "我是90后。": 31,
+            "工作五年了。": 27,
+        }
+        for text, want in cases.items():
+            self.assertEqual(self.age(text), want, "%s 应识别为 %d" % (text, want))
+
+    def test_never_takes_someone_elses_age(self):
+        """最重要的一组：别人的年龄绝不能算成你的。"""
+        for text in ("我爸60岁了，身体还硬朗。",
+                     "我女儿5岁，正上幼儿园。",
+                     "我妈是1965年生的。",
+                     "爷爷93岁走的，那年我刚工作。",
+                     "我带的学生18岁。",
+                     "我妈今年六十了。她58岁那年查出糖尿病。",
+                     "同事都30出头，我还没结婚。",
+                     "我们班同学平均25岁。"):
+            self.assertIsNone(self.age(text), "%s 不该得出年龄" % text)
+
+    def test_rejects_non_current_ages(self):
+        """过去、假设、虚构、差值、表象——都不是当前年龄。"""
+        for text in ("我20岁那年去了北京。",
+                     "18岁时我第一次离开家。",
+                     "记得25岁那会儿。",
+                     "我老婆比我小两岁。",
+                     "要是能回到18岁就好了。",
+                     "游戏里我捏了个25岁的角色。",
+                     "别人都以为我25岁。",
+                     "我是2018年去的日本。"):
+            self.assertIsNone(self.age(text), "%s 不该得出年龄" % text)
+
+    def test_rejects_number_lookalikes(self):
+        for text in ("我今年30号搬的家。", "我今年30万年终奖。",
+                     "我最近很迷茫。"):
+            self.assertIsNone(self.age(text), "%s 不该得出年龄" % text)
+
+    def test_composes_past_age_plus_elapsed(self):
+        self.assertEqual(
+            self.age("我23岁那年从老家出来打工，今年是我出来的第十七个年头。"), 40)
+
+    def test_melts_down_on_contradiction(self):
+        from engine.age import extract_age
+        r = extract_age("我今年32岁。我今年40岁。", self.YEAR)
+        self.assertIsNone(r["age"], "自相矛盾时应诚实返回无法判断")
+        self.assertIn("矛盾", r["how"] or "")
+
+    def test_realistic_stories(self):
+        """25 段真实感人生经历（含陷阱与无法判断型）。"""
+        path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                            "tests_age_cases.json")
+        with open(path, encoding="utf-8") as f:
+            cases = json.load(f)
+        for c in cases:
+            got = self.age(c["story"])
+            if c["expect_none"]:
+                self.assertIsNone(got, "应无法判断: %s" % c["story"][:30])
+            else:
+                self.assertIsNotNone(got, "应识别出年龄: %s" % c["story"][:30])
+                self.assertLessEqual(
+                    abs(got - c["expected_age"]), c["tolerance"],
+                    "%s → %s，期望 %s±%s"
+                    % (c["story"][:30], got, c["expected_age"], c["tolerance"]))
+
+    def test_profile_reports_unknown_age_honestly(self):
+        p = build_profile("我最近很迷茫，不知道该干什么，每天都提不起劲。",
+                          current_year=self.YEAR)
+        self.assertFalse(p["age_known"])
+        self.assertEqual(p["age_confidence"], 0)
+        self.assertTrue(p["age"], "读不出年龄时仍应给模拟一个可用的起点")
+
+    def test_profile_reports_known_age_with_evidence(self):
+        p = build_profile("我是1995年生的，在深圳做设计。", current_year=self.YEAR)
+        self.assertTrue(p["age_known"])
+        self.assertEqual(p["age"], 31)
+        self.assertGreater(p["age_confidence"], 50)
+        self.assertIn("1995", p["age_evidence"])
 
 
 class TestEventCorpus(unittest.TestCase):

@@ -103,14 +103,7 @@
 写得越具体（时间、地点、细节、感受），侧写引擎就越了解你，
 模拟出的人生轨迹也越贴近你本人的性格逻辑。"></textarea>
     <div class="row">
-      <label class="hint">年龄 <input id="age" type="number" min="5" max="100" placeholder="选填"></label>
-      <label class="hint">性别
-        <select id="gender">
-          <option value="">自动识别</option>
-          <option value="male">男</option>
-          <option value="female">女</option>
-        </select>
-      </label>
+      <span class="hint">年龄与性别都会从你的故事里自动识别</span>
       <span class="hint" id="charCount">0 字</span>
     </div>
     <div class="row">
@@ -214,6 +207,395 @@ const FACT_PATTERNS = {
 };
 const FACT_NAMES = {education: "教育", career: "职业", romance: "感情", family: "家庭", health: "健康", finance: "经济"};
 
+/* ============================================================
+ * 年龄自动识别（engine/age.py 的 1:1 移植）
+ * 分层找候选 → 过安全关（归属/时态/差值/逝者/群体/虚构）→ 排序取舍
+ * ============================================================ */
+
+const CN_DIGITS = {"零":0,"〇":0,"○":0,"0":0,"一":1,"壹":1,"1":1,"二":2,"贰":2,"两":2,"俩":2,"2":2,
+  "三":3,"叁":3,"仨":3,"3":3,"四":4,"肆":4,"4":4,"五":5,"伍":5,"5":5,"六":6,"陆":6,"6":6,
+  "七":7,"柒":7,"7":7,"八":8,"捌":8,"8":8,"九":9,"玖":9,"9":9};
+const CN_UNITS = {"十":10,"拾":10,"百":100,"佰":100};
+const CN_COMPOUND = {"廿":20,"卅":30,"卌":40};
+
+function cnToInt(text) {
+  if (text === null || text === undefined) return null;
+  text = String(text).trim();
+  if (!text) return null;
+  if (/^\d+$/.test(text)) return parseInt(text, 10);
+  if (CN_COMPOUND[text[0]] !== undefined) {
+    const base = CN_COMPOUND[text[0]], rest = text.slice(1);
+    if (!rest) return base;
+    const tail = rest.length === 1 ? CN_DIGITS[rest] : undefined;
+    return tail !== undefined ? base + tail : null;
+  }
+  let total = 0, section = 0, digit = null;
+  for (const ch of text) {
+    if (CN_DIGITS[ch] !== undefined) digit = CN_DIGITS[ch];
+    else if (CN_UNITS[ch] !== undefined) {
+      const unit = CN_UNITS[ch];
+      if (unit === 10) { section += (digit === null ? 1 : digit) * 10; digit = null; }
+      else {
+        section = section ? (section + (digit === null ? 1 : digit)) * 100
+                          : (digit === null ? 1 : digit) * 100;
+        digit = null;
+      }
+    } else return null;
+  }
+  total = section + (digit || 0);
+  return (total || CN_DIGITS[text[text.length - 1]] !== undefined) ? total : null;
+}
+
+const YEAR_DIGITS = {"零":"0","〇":"0","○":"0","一":"1","二":"2","三":"3","四":"4",
+  "五":"5","六":"6","七":"7","八":"8","九":"9"};
+function cnYearToInt(text) {
+  let out = "";
+  for (const ch of text) { if (YEAR_DIGITS[ch] === undefined) return null; out += YEAR_DIGITS[ch]; }
+  return out ? parseInt(out, 10) : null;
+}
+function century(yy, currentYear) {
+  const c = 2000 + yy;
+  return c <= currentYear ? c : 1900 + yy;
+}
+
+const NUM = "(\\d{1,3}|[零〇一二两俩三仨四五六七八九十拾廿卅百]{1,4})";
+const CN_YEAR = "([零〇○一二三四五六七八九]{2,4})";
+
+const OTHER_WORDS = "爸爸|爸|父亲|老爸|妈妈|妈|母亲|老妈|爷爷|奶奶|外公|外婆|姥姥|姥爷|" +
+  "哥哥|哥|姐姐|姐|弟弟|弟|妹妹|妹|儿子|女儿|孩子|娃|外甥|侄子|侄女|" +
+  "孙子|孙女|老婆|妻子|老公|丈夫|媳妇|爱人|对象|男朋友|女朋友|男友|女友|" +
+  "前任|前妻|前夫|叔叔|阿姨|舅舅|姑姑|姨|伯父|表哥|表姐|表弟|表妹|堂哥|" +
+  "同事|同学|朋友|哥们|闺蜜|室友|老师|学生|学员|徒弟|师傅|领导|老板|" +
+  "客户|甲方|病人|患者|邻居|房东|租客|保姆|司机|员工|下属|教练|他|她|他们|她们";
+const SUBJECT_RE = new RegExp("((?:我|我们|咱|咱们|俺)?(?:的)?(?:" + OTHER_WORDS + "))|((?:我|俺|本人)(?!们))", "g");
+const CLAUSE_SPLIT_RE = /[。！？!?；;，,、\n\r…—\s]+/g;
+
+const PAST_RIGHT_RE = /^\s*(?:岁)?\s*(?:那年|那会儿|那会|那阵|那几年|的时候|时候|时[，,]|时我|之前|以前|当年|当时|前后|左右的时候)/;
+const PAST_LEFT_RE = /(?:记得|还记得|想当年|回想|回头看|曾经|以前|从前|小时候|年轻时|当初|那时候|那年|当年)[^。！？!?\n]{0,10}$|(?:熬到|干到|做到|活到|等到|直到|一直到)\s*$/;
+const HYPO_LEFT_RE = /(?:怕|担心|害怕|万一|如果|要是|假如|等到|将来|以后|听说|据说|传说|据传)[^。！？!?\n]{0,8}$/;
+const HYPO_RIGHT_RE = /^\s*(?:岁)?\s*(?:就)?\s*(?:被优化|被裁|裁员|危机|门槛|之前一定|前一定)/;
+const DIFF_RE = new RegExp("(?:比|跟|和)\\s*[^，。！？\\n]{0,6}?\\s*(?:大|小)\\s*(?:了)?\\s*" + NUM +
+  "\\s*岁|(?:大|小)\\s*(?:我|他|她)\\s*" + NUM + "\\s*岁|(?:差|相差|差了)\\s*" + NUM + "\\s*岁", "g");
+const DECEASED_RIGHT_RE = /^\s*(?:岁)?\s*(?:那年)?\s*(?:就)?\s*(?:走的|去世|过世|离世|不在了|驾鹤|寿终|病逝)|^\s*(?:岁)?\s*(?:那年)?\s*(?:就)?\s*(?:走了|没了)\s*$/;
+const DECEASED_LEFT_RE = /(?:享年|终年)\s*$/;
+const GROUP_RE = /平均|人均|中位|大多数|大部分|普遍|多数人|同龄人|那一辈|一代人|我们班|我们公司|我们那|同事们|同学们/;
+const WISH_RE = /如果|假如|要是|假设|万一|但愿|希望|多希望|恨不得|要能|若能|回到|重来|重活|穿越|梦见|想象|幻想/;
+const FICTION_RE = /角色|主角|女主|男主|主人公|小说|电影|电视剧|动漫|漫画|游戏里|书里|片子|剧里|作者|明星|偶像|演员|扮演|捏了个|设定/;
+const APPARENT_RE = /以为|看着像|看起来|显得|说我像|猜我|误以为|被当成|像个/;
+const UNIT_GUARD = "(?![0-9]|岁|周|楼|层|号|路|室|栋|分|块|元|万|千|毛|角|斤|公斤|克|吨|米|厘|公里|秒|点|天|周|月|年|届|班|名|位|个|人|次|遍|条|件|台|度|平|％|%|k|K)";
+
+const CLASSIC_AGES = {"弱冠":20,"而立":30,"不惑":40,"知天命":50,"天命":50,"半百":50,"花甲":60,"古稀":70,"耄耋":80};
+const EDU_STAGE = {"大一":19,"大二":20,"大三":21,"大四":22,"大五":23,"研一":23,"研二":24,"研三":25,
+  "博一":26,"博二":27,"博三":28,"高一":16,"高二":17,"高三":18,"初一":13,"初二":14,"初三":15};
+const GRAD_BASE = [["博士",28],["硕士",25],["研究生",25],["本科",22],["大学",22],["大专",20],
+  ["专科",20],["高中",18],["中专",18],["初中",15],["小学",12]];
+
+function clauseSpans(text) {
+  const spans = []; let start = 0;
+  const re = new RegExp(CLAUSE_SPLIT_RE.source, "g");
+  let m;
+  while ((m = re.exec(text)) !== null) {
+    if (m.index > start) spans.push([start, m.index]);
+    start = m.index + m[0].length;
+    if (m[0].length === 0) re.lastIndex++;
+  }
+  if (start < text.length) spans.push([start, text.length]);
+  return spans;
+}
+function subjectMarks(text) {
+  const marks = []; const re = new RegExp(SUBJECT_RE.source, "g"); let m;
+  while ((m = re.exec(text)) !== null) {
+    marks.push([m.index, m[1] ? "other" : "self"]);
+    if (m[0].length === 0) re.lastIndex++;
+  }
+  return marks;
+}
+function subjectAt(pos, clause, marks) {
+  const inClause = marks.filter(([p]) => clause[0] <= p && p <= pos);
+  if (inClause.length) return inClause[inClause.length - 1][1];
+  const before = marks.filter(([p]) => p < clause[0]);
+  return before.length ? before[before.length - 1][1] : "unknown";
+}
+
+function blocked(text, start, end, clause) {
+  const [cStart, cEnd] = clause;
+  const left = text.slice(Math.max(cStart, start - 12), start);
+  const right = text.slice(end, Math.min(cEnd + 6, end + 12));
+  const clauseText = text.slice(cStart, cEnd);
+  if (DECEASED_LEFT_RE.test(left) || DECEASED_RIGHT_RE.test(right)) return "逝者年龄";
+  if (HYPO_LEFT_RE.test(left) || HYPO_RIGHT_RE.test(right)) return "假设/未来的年龄";
+  if (PAST_LEFT_RE.test(left) || PAST_RIGHT_RE.test(right)) return "过去的年龄";
+  if (GROUP_RE.test(clauseText)) return "群体/平均年龄";
+  if (WISH_RE.test(clauseText)) return "假设语气";
+  if (FICTION_RE.test(clauseText)) return "虚构人物";
+  if (APPARENT_RE.test(text.slice(cStart, start))) return "别人以为的年龄";
+  const dre = new RegExp(DIFF_RE.source, "g"); let dm;
+  while ((dm = dre.exec(clauseText)) !== null) {
+    if (dm.index <= start - cStart && start - cStart < dm.index + dm[0].length) return "年龄差值";
+    if (dm[0].length === 0) dre.lastIndex++;
+  }
+  return null;
+}
+
+function collectCands(text, currentYear) {
+  const out = [], claimed = [];
+  const add = (age, tier, conf, m, how, spanGroup, generic) => {
+    if (age === null || age === undefined || !(age >= 5 && age <= 100)) return;
+    const mStart = m.index, mEnd = m.index + m[0].length;
+    let start = mStart, end = mEnd;
+    if (spanGroup) {   // 定位到指定捕获组，让左侧修饰词落进判定窗口
+      const rel = m[0].indexOf(m[spanGroup]);
+      if (rel >= 0) { start = mStart + rel; end = start + m[spanGroup].length; }
+    }
+    if (generic) { if (claimed.some(([s, e]) => s < mEnd && mStart < e)) return; }
+    else claimed.push([mStart, mEnd]);
+    out.push({age: Math.round(age), tier, conf, start, end, how, evidence: m[0].trim()});
+  };
+  const each = (pattern, fn) => {
+    const re = new RegExp(pattern, "g"); let m;
+    while ((m = re.exec(text)) !== null) { fn(m); if (m[0].length === 0) re.lastIndex++; }
+  };
+  const n = (raw) => (raw ? cnToInt(raw) : null);
+
+  /* --- tier 1: 明确的当前年龄 --- */
+  each("(虚岁|毛岁|周岁|实岁|足岁)\\s*(?:才|都|已|刚)?\\s*" + NUM, (m) => {
+    const v = n(m[2]);
+    if (v !== null) add((m[1] === "虚岁" || m[1] === "毛岁") ? v - 1 : v, 1, 95, m, "文中写明" + m[1]);
+  });
+  each("(?:年龄|年纪|岁数)\\s*(?:是|为|[:：,，])?\\s*" + NUM, (m) => add(n(m[1]), 1, 93, m, "文中写明年龄"));
+  each("([一二三四五六七八九]?[十拾])?\\s*([一二三四五六七八九])\\s*([一二三四五六七八九])\\s*岁", (m) => {
+    const d1 = n(m[2]), d2 = n(m[3]);
+    if (d1 !== null && d2 === d1 + 1) add((m[1] ? n(m[1]) : 0) + d2, 1, 82, m, "由'二十七八'式概数推算");
+  });
+  each("([一二三四五六七八九]?[十拾])\\s*(?:有|又|零)\\s*([一二三四五六七八九])\\s*岁?", (m) => {
+    const tens = n(m[1]), unit = n(m[2]);
+    if (tens && unit) add(tens + unit, 1, 84, m, "文中写明年龄");
+  });
+  each("(?:刚刚|刚|才|将将)\\s*(?:满|到|过|够|迈过)\\s*" + NUM + "\\s*(?:周)?岁",
+       (m) => add(n(m[1]), 1, 90, m, "文中写明刚满的岁数"));
+  each(NUM + "\\s*岁\\s*(?:的)?生日\\s*(?:刚|才|刚刚)?\\s*(?:过完|过了|过)",
+       (m) => add(n(m[1]), 1, 90, m, "由生日推算"));
+  each("(去年|上一年|前年)\\s*(?:我)?\\s*(?:才|刚|就|已经)?\\s*" + NUM + "\\s*(?:岁|了)", (m) => {
+    const v = n(m[2]);
+    if (v !== null) add(v + (m[1] === "前年" ? 2 : 1), 1, 78, m, "由'" + m[1] + "的年龄'推算");
+  });
+  each("(?:明年|过完年|过了年|开年|开春)\\s*(?:我)?\\s*(?:就|才|要|便)?\\s*" + NUM + "\\s*(?:岁)?\\s*了",
+       (m) => { const v = n(m[1]); add(v ? v - 1 : null, 1, 76, m, "由'明年就某岁'推算"); });
+  each("(?:再过|还有)\\s*" + NUM + "\\s*年\\s*(?:我)?\\s*(?:就|才)?\\s*" + NUM + "\\s*(?:岁)?\\s*了", (m) => {
+    const span = n(m[1]), target = n(m[2]);
+    if (span && target) add(target - span, 1, 74, m, "由'再过几年就某岁'推算");
+  });
+  each("(?:本人|我)?\\s*[男女]\\s*[,，、/|]\\s*(\\d{1,3})\\s*(?=[,，、/|。]|$)",
+       (m) => add(parseInt(m[1], 10), 1, 76, m, "由自述格式识别"));
+  each("(?:那年|那一年|当年|那会儿|当时|时)\\s*我\\s*" + NUM + "(?![0-9岁点块元万千年月日分楼层号个])",
+       (m) => add(n(m[1]), 1, 70, m, "文中写明年龄", 1));
+  for (const [cStart, cEnd] of clauseSpans(text)) {
+    const mm = new RegExp("^\\s*" + NUM + "\\s*了$").exec(text.slice(cStart, cEnd));
+    if (mm) {
+      const v = n(mm[1]);
+      if (v !== null && v >= 10 && v <= 100) {
+        out.push({age: v, tier: 1, conf: 68, start: cStart, end: cStart + mm[0].length,
+                  how: "文中写明年龄", evidence: mm[0].trim()});
+        claimed.push([cStart, cStart + mm[0].length]);
+      }
+    }
+  }
+  each("(?:今年|现在|如今)\\s*(?:我)?\\s*(?:都|也|已经|才|刚)?\\s*" + NUM + UNIT_GUARD +
+       "(?=[了，,。、；;：:！!？?…\\s]|$)", (m) => add(n(m[1]), 1, 80, m, "文中写明年龄"));
+  each("我\\s*(?:都|也|已经|才)?\\s*" + NUM + "\\s*了" + UNIT_GUARD,
+       (m) => add(n(m[1]), 1, 72, m, "文中写明年龄"));
+
+  /* --- tier 2: 年份锚点折算（"2008年我18岁" → 现在 36 岁） --- */
+  each("(19\\d{2}|20[0-2]\\d)\\s*年[^。！？；\\n]{0,8}?我\\s*(?:才|刚|已经|那年)?\\s*" + NUM + "\\s*岁", (m) => {
+    const year = parseInt(m[1], 10), v = n(m[2]);
+    if (v !== null && year >= 1930 && year <= currentYear) {
+      const born = year - v;
+      if (born >= 1926 && born <= currentYear)
+        add(currentYear - born, 2, 78, m, "由'" + year + "年时" + v + "岁'推算");
+    }
+  });
+  each("我\\s*" + NUM + "\\s*岁[^。！？；\\n]{0,8}?那年是?\\s*(19\\d{2}|20[0-2]\\d)\\s*年", (m) => {
+    const v = n(m[1]), year = parseInt(m[2], 10);
+    if (v !== null && year >= 1930 && year <= currentYear) {
+      const born = year - v;
+      if (born >= 1926 && born <= currentYear)
+        add(currentYear - born, 2, 78, m, "由'" + year + "年时" + v + "岁'推算");
+    }
+  });
+
+  /* 通用式放最后，专用式已经占住了各自的区间 */
+  each(NUM + "\\s*岁", (m) => add(n(m[1]), 1, 92, m, "文中写明年龄", null, true));
+
+  /* --- tier 2: 出生年份 --- */
+  each("(19\\d{2}|20[0-2]\\d)\\s*年?[^，。！？\\n]{0,6}?(出生|生人|生的|生)",
+       (m) => add(currentYear - parseInt(m[1], 10), 2, 90, m, "由出生年份推算"));
+  each("(?:出生于|生于)\\s*(19\\d{2}|20[0-2]\\d)",
+       (m) => add(currentYear - parseInt(m[1], 10), 2, 90, m, "由出生年份推算"));
+  each("(?:我|本人)\\s*是\\s*(19\\d{2}|20[0-2]\\d)\\s*年(?:出生|生)?的(?:人)?(?![一-龥])",
+       (m) => add(currentYear - parseInt(m[1], 10), 2, 88, m, "由出生年份推算"));
+  each("(?:我|本人)\\s*(?:是)?\\s*(\\d{2})\\s*年(?:出生|生人|生的|生|的)",
+       (m) => add(currentYear - century(parseInt(m[1], 10), currentYear), 2, 82, m, "由出生年份推算"));
+  each("(?:出生于|生于|我是|本人)\\s*" + CN_YEAR + "\\s*年", (m) => {
+    let y = cnYearToInt(m[1]);
+    if (y !== null) {
+      if (y < 100) y = century(y, currentYear);
+      if (y >= 1900 && y <= currentYear) add(currentYear - y, 2, 80, m, "由出生年份推算");
+    }
+  });
+
+  /* --- tier 3: 概数年龄 --- */
+  each("(?:快|将近|接近|差不多|马上|眼看|就要)\\s*" + NUM + "\\s*(?:岁|了)",
+       (m) => { const v = n(m[1]); add(v ? v - 1 : null, 3, 70, m, "由'快到某岁'估算"); });
+  each(NUM + "\\s*(?:岁)?\\s*出头",
+       (m) => { const v = n(m[1]); add(v ? v + 2 : null, 3, 70, m, "由'某岁出头'估算"); });
+  each(NUM + "\\s*多岁", (m) => { const v = n(m[1]); add(v ? v + 4 : null, 3, 66, m, "由'某十多岁'估算"); });
+  each(NUM + "\\s*来岁", (m) => add(n(m[1]), 3, 66, m, "由'某十来岁'估算"));
+  each(NUM + "\\s*岁?\\s*好几", (m) => { const v = n(m[1]); add(v ? v + 5 : null, 3, 64, m, "由'某十好几'估算"); });
+  each("(年过|年逾|过了|已过|年近|将近|快到|快|步入|迈入|正值|届)?\\s*(弱冠|而立|不惑|知天命|天命|半百|花甲|古稀|耄耋)", (m) => {
+    let base = CLASSIC_AGES[m[2]];
+    const prefix = m[1] || "";
+    if (["年过","年逾","过了","已过"].includes(prefix)) base += 2;
+    else if (["年近","将近","快到","快"].includes(prefix)) base -= 1;
+    add(base, 3, 68, m, "由'" + m[2] + "'推算");
+  });
+  each("(?:年方)?\\s*二八(?:年华|佳人)", (m) => add(16, 3, 60, m, "由'二八年华'推算"));
+
+  /* --- tier 4: 里程碑年份 --- */
+  each("(19\\d{2}|20[0-2]\\d)\\s*年?\\s*(?:参加)?\\s*高考",
+       (m) => add(currentYear - parseInt(m[1], 10) + 18, 4, 74, m, "由高考年份推算"));
+  each("高考\\s*(?:是在|在|是)\\s*(19\\d{2}|20[0-2]\\d)",
+       (m) => add(currentYear - parseInt(m[1], 10) + 18, 4, 74, m, "由高考年份推算"));
+  each("(19\\d{2}|20[0-2]\\d)\\s*年[^，。！？\\n]{0,10}?毕业", (m) => {
+    const w = text.slice(Math.max(0, m.index - 12), m.index + m[0].length + 6);
+    const hit = GRAD_BASE.find(([kw]) => w.includes(kw));
+    add(currentYear - parseInt(m[1], 10) + (hit ? hit[1] : 22), 4, 70, m, "由毕业年份推算");
+  });
+  each("(19\\d{2}|20[0-2]\\d)\\s*年\\s*(?:上|考上|考进|读)\\s*(?:的)?\\s*大学",
+       (m) => add(currentYear - parseInt(m[1], 10) + 18, 4, 72, m, "由入学年份推算"));
+  each("(19\\d{2}|20[0-2]\\d)\\s*届", (m) => {
+    const w = text.slice(Math.max(0, m.index - 10), m.index + m[0].length + 8);
+    const hit = GRAD_BASE.find(([kw]) => w.includes(kw));
+    add(currentYear - parseInt(m[1], 10) + (hit ? hit[1] : 22), 4, 66, m, "由毕业届别推算");
+  });
+
+  /* --- tier 5: 在读学段 --- */
+  each(Object.keys(EDU_STAGE).join("|"), (m) => add(EDU_STAGE[m[0]], 5, 62, m, "由在读年级推算"));
+  each("小学\\s*" + NUM + "\\s*年级", (m) => { const v = n(m[1]); add(v ? 6 + v : null, 5, 60, m, "由在读年级推算"); });
+  each("(?:^|[^大高初中学])" + NUM + "\\s*年级", (m) => {
+    const v = n(m[1]);
+    if (v !== null && v >= 1 && v <= 6) add(6 + v, 5, 58, m, "由在读年级推算");
+  });
+  each("应届(?:生|毕业生)?", (m) => add(22, 5, 58, m, "由'应届'推算"));
+  each("(?:还有|距离|马上|即将|准备|备战|复习)[^。！？\\n]{0,10}?高考", (m) => add(18, 5, 60, m, "由'即将高考'推算"));
+
+  /* --- tier 6: 代际 --- */
+  each("(\\d{2})\\s*后(?![来面续期]|勤)", (m) => {
+    const yy = parseInt(m[1], 10);
+    const born = century(yy, currentYear) + (yy % 10 === 0 ? 5 : 2);
+    add(currentYear - born, 6, 50, m, "由代际推算");
+  });
+  each("([零〇八九一二三四五六七]{2})\\s*后(?![来面续期])", (m) => {
+    const yy = cnYearToInt(m[1]);
+    if (yy !== null) add(currentYear - (century(yy, currentYear) + (yy % 10 === 0 ? 5 : 2)), 6, 46, m, "由代际推算");
+  });
+
+  /* --- tier 7: 工龄 --- */
+  each("(?:工作|上班)\\s*(?:了)?\\s*" + NUM + "\\s*年",
+       (m) => { const v = n(m[1]); add(v ? 22 + v : null, 7, 48, m, "由工作年限推算"); });
+  each("毕业\\s*(?:了)?\\s*" + NUM + "\\s*年",
+       (m) => { const v = n(m[1]); add(v ? 22 + v : null, 7, 48, m, "由毕业年限推算"); });
+  each("刚\\s*毕业", (m) => add(22, 7, 46, m, "由'刚毕业'推算"));
+
+  /* --- tier 8: 人生阶段 --- */
+  each("我\\s*(?:已经)?\\s*退休", (m) => add(62, 8, 40, m, "由'已退休'推算"));
+  each("(?:快|将)\\s*退休", (m) => add(58, 8, 38, m, "由'快退休'推算"));
+
+  return out;
+}
+
+const DURATION_PATTERNS = [
+  "第\\s*" + NUM + "\\s*个?\\s*年头",
+  "(?:从警|从医|从教|从业|入行|干|做|工作|上班|退休|出来|北漂|漂了|来这|在这|待了|过去)\\s*(?:了)?\\s*" + NUM + "\\s*年",
+  NUM + "\\s*年\\s*(?:过去了|过去|下来|了)",
+];
+function durations(text) {
+  const found = [];
+  for (const p of DURATION_PATTERNS) {
+    const re = new RegExp(p, "g"); let m;
+    while ((m = re.exec(text)) !== null) {
+      const v = cnToInt(m[1]);
+      if (v !== null && v >= 1 && v <= 80) found.push([v, m.index, m[0].trim()]);
+      if (m[0].length === 0) re.lastIndex++;
+    }
+  }
+  return found;
+}
+
+function extractAge(text, currentYear) {
+  const result = {age: null, confidence: 0, how: null, evidence: null, rejected: []};
+  text = text || "";
+  if (!text.trim()) return result;
+
+  const clauses = clauseSpans(text);
+  const marks = subjectMarks(text);
+  const clauseOf = (pos) => clauses.find(([s, e]) => s <= pos && pos < e) || [0, text.length];
+
+  const accepted = [], pastCands = [];
+  for (const cand of collectCands(text, currentYear)) {
+    const clause = clauseOf(cand.start);
+    let reason = blocked(text, cand.start, cand.end, clause);
+    const subject = subjectAt(cand.start, clause, marks);
+    if (reason === null) {
+      if (subject === "other") reason = "说的是别人";
+      else if (subject === "unknown") cand.conf -= 10;
+    }
+    if (reason) {
+      if (reason === "过去的年龄" && subject !== "other") pastCands.push(cand);
+      result.rejected.push({text: cand.evidence, reason, age: cand.age});
+    } else accepted.push(cand);
+  }
+
+  // 组合推算：过去的年龄 + 经过的年数
+  if (pastCands.length && !accepted.some(c => c.tier <= 2)) {
+    const durs = durations(text);
+    if (durs.length) {
+      const anchor = pastCands.reduce((a, b) => (a.start <= b.start ? a : b));
+      const best = durs.reduce((a, b) => (a[0] >= b[0] ? a : b));
+      const age = anchor.age + best[0];
+      if (age >= 5 && age <= 100) {
+        accepted.push({age, tier: 2, conf: 66, start: anchor.start, end: anchor.end,
+          how: "由'" + anchor.evidence + "'加上经过的" + best[0] + "年推算",
+          evidence: anchor.evidence + " + " + best[2]});
+      }
+    }
+  }
+
+  if (!accepted.length) return result;
+
+  accepted.sort((a, b) => (a.tier - b.tier) || (b.conf - a.conf) || (a.start - b.start));
+  const best = accepted[0];
+
+  const strong = accepted.filter(c => c.tier === 1 && c.conf >= 80);
+  if (strong.length > 1) {
+    const hi = Math.max(...strong.map(c => c.age)), lo = Math.min(...strong.map(c => c.age));
+    if (hi - lo >= 2) {
+      result.how = "文中出现了互相矛盾的年龄";
+      result.rejected.push({text: [...new Set(strong.map(c => c.age + "岁"))].sort().join("、"),
+        reason: "多个自述年龄互相矛盾", age: null});
+      return result;
+    }
+  }
+  const sameTier = accepted.filter(c => c.tier === best.tier);
+  if (sameTier.length > 1 && sameTier.some(c => Math.abs(c.age - best.age) > 2))
+    best.conf = Math.max(30, best.conf - 15);
+
+  result.age = best.age;
+  result.confidence = Math.max(0, Math.min(100, best.conf));
+  result.how = best.how;
+  result.evidence = best.evidence;
+  return result;
+}
+
 /* ---------------- 侧写引擎（与 engine/profiler.py 同步） ---------------- */
 function splitSentences(text) {
   return text.split(/[。！？!?\n;；]+/).map(s => s.trim()).filter(Boolean);
@@ -296,15 +678,10 @@ function buildProfile(text, extra) {
     if (hits.length) facts[domain] = hits.slice(0, 8);
   }
 
-  let age = null, ageSource = null;
-  let m = text.match(/(?:今年|我)\s*(\d{1,2})\s*岁/) || text.match(/(\d{1,2})\s*岁(?:了|的我)/);
-  if (m) { const a = parseInt(m[1], 10); if (a >= 5 && a <= 100) { age = a; ageSource = "文中提到年龄"; } }
-  if (age === null) {
-    m = text.match(/(19[5-9]\d|20[0-2]\d)\s*年\s*(?:出生|生)/) || text.match(/出生于\s*(19[5-9]\d|20[0-2]\d)/) || text.match(/我是\s*(19[5-9]\d|20[0-2]\d)\s*年/);
-    if (m) { const a = currentYear - parseInt(m[1], 10); if (a >= 5 && a <= 100) { age = a; ageSource = "由出生年份推算"; } }
-  }
-  if (extra.age) { age = extra.age; ageSource = "用户填写"; }
-  if (age === null) { age = 25; ageSource = "默认值(文中未提及)"; }
+  const ageInfo = extractAge(text, currentYear);
+  const ageKnown = ageInfo.age !== null;
+  const age = ageKnown ? ageInfo.age : 25;   // 读不出年龄时按 25 岁模拟，界面会明说
+  const ageSource = ageKnown ? ageInfo.how : "文中没读出年龄，按默认值模拟";
 
   let gender = extra.gender || null;
   if (!gender) for (const [pat, g] of GENDER_HINTS) { if (pat.test(text)) { gender = g; break; } }
@@ -325,6 +702,8 @@ function buildProfile(text, extra) {
     attachment: bestStyle, attachment_name: ATTACHMENT_NAMES[bestStyle],
     facts, fact_names: FACT_NAMES,
     age, age_source: ageSource, gender,
+    age_known: ageKnown, age_confidence: ageInfo.confidence,
+    age_evidence: ageInfo.evidence, age_rejected: ageInfo.rejected.slice(0, 4),
     education_level: eduLevel,
     married: ["结婚","老婆","妻子","老公","丈夫"].some(k => text.includes(k)) && !text.includes("离婚"),
     has_children: ["女儿","儿子","孩子上","我的孩子"].some(k => text.includes(k)),
@@ -677,11 +1056,7 @@ $("story").addEventListener("input", () => {
 });
 
 function inputs() {
-  return {
-    story: $("story").value,
-    age: parseInt($("age").value, 10) || undefined,
-    gender: $("gender").value || undefined,
-  };
+  return { story: $("story").value };
 }
 function esc(s) {
   return String(s).replace(/[&<>"]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c]));
@@ -707,9 +1082,28 @@ function renderProfile(p) {
     if (v > 0) html += `<span class="tag">${esc(p.value_names[k])} <b>${v}%</b></span>`;
   }
   html += `<span class="tag">依恋风格 <b>${esc(p.attachment_name)}</b></span>`;
-  html += `<span class="tag">年龄 <b>${p.age}</b> <span style="font-size:11px">(${esc(p.age_source)})</span></span>`;
+  if (p.age_known) {
+    const ev = p.age_evidence ? `「${esc(p.age_evidence)}」` : "";
+    html += `<span class="tag">年龄 <b>${p.age}</b> <span style="font-size:11px">`
+      + `${esc(p.age_source)}${ev}</span></span>`;
+  } else {
+    html += `<span class="tag" style="border-color:var(--warn)">年龄 <b>${p.age}</b>`
+      + ` <span style="font-size:11px">默认值</span></span>`;
+  }
   if (p.gender) html += `<span class="tag">性别 <b>${p.gender === "male" ? "男" : "女"}</b></span>`;
   html += `</div>`;
+  if (!p.age_known) {
+    html += `<div class="conf-note" style="border-left-color:var(--warn)">`
+      + `没能从你的故事里读出年龄，先按 ${p.age} 岁模拟。`
+      + `补一句"我今年X岁"或"我是X年生的"，整条人生轨迹会准得多。</div>`;
+  } else if (p.age_rejected && p.age_rejected.length) {
+    const skipped = p.age_rejected.filter(r => r.age !== null)
+      .map(r => `${esc(r.text)}(${esc(r.reason)})`).slice(0, 3);
+    if (skipped.length) {
+      html += `<div class="evidence" style="margin-left:0">`
+        + `· 年龄识别时跳过了：${skipped.join("、 ")}</div>`;
+    }
+  }
   const factKeys = Object.keys(p.facts || {});
   if (factKeys.length) {
     html += `<div style="margin-top:14px" class="hint">从你的故事里读到的生平线索：</div>`;

@@ -21,6 +21,7 @@ import math
 import re
 
 from . import lexicon
+from .age import extract_age
 
 
 # ---------------------------------------------------------------------------
@@ -79,16 +80,6 @@ def _to_scale(raw_score, text_len):
 # 生平事实抽取
 # ---------------------------------------------------------------------------
 
-_AGE_PATTERNS = [
-    re.compile(r"(?:今年|我)\s*(\d{1,2})\s*岁"),
-    re.compile(r"(\d{1,2})\s*岁(?:了|的我)"),
-]
-_BIRTH_YEAR_PATTERNS = [
-    re.compile(r"(19[5-9]\d|20[0-2]\d)\s*年\s*(?:出生|生)"),
-    re.compile(r"出生于\s*(19[5-9]\d|20[0-2]\d)"),
-    re.compile(r"我是\s*(19[5-9]\d|20[0-2]\d)\s*年"),
-]
-
 _EDU_RANK = [
     ("博士", 5), ("硕士", 4), ("研究生", 4), ("考研", 4), ("本科", 3),
     ("大学", 3), ("留学", 3), ("大专", 2), ("专科", 2), ("高中", 1),
@@ -103,20 +94,7 @@ _GENDER_HINTS = [
 ]
 
 
-def _extract_age(text, current_year):
-    for pat in _AGE_PATTERNS:
-        m = pat.search(text)
-        if m:
-            age = int(m.group(1))
-            if 5 <= age <= 100:
-                return age, "文中提到年龄"
-    for pat in _BIRTH_YEAR_PATTERNS:
-        m = pat.search(text)
-        if m:
-            age = current_year - int(m.group(1))
-            if 5 <= age <= 100:
-                return age, "由出生年份推算"
-    return None, None
+DEFAULT_AGE = 25  # 完全读不出年龄时的模拟起点，界面会明确告知这是默认值
 
 
 def _extract_facts(text, sentences):
@@ -212,11 +190,13 @@ def build_profile(text, extra=None, current_year=2026):
 
     # --- 生平事实 ---
     facts = _extract_facts(text, sentences)
-    age, age_source = _extract_age(text, current_year)
-    if extra.get("age"):
-        age, age_source = int(extra["age"]), "用户填写"
-    if age is None:
-        age, age_source = 25, "默认值(文中未提及)"
+    age_info = extract_age(text, current_year)
+    if extra.get("age"):   # API 仍接受显式年龄，界面已不再提供输入框
+        age_info = {"age": int(extra["age"]), "confidence": 100,
+                    "how": "用户填写", "evidence": None, "rejected": []}
+    age_known = age_info["age"] is not None
+    age = age_info["age"] if age_known else DEFAULT_AGE
+    age_source = age_info["how"] if age_known else "文中没读出年龄，按默认值模拟"
 
     gender = extra.get("gender")
     if gender not in ("male", "female"):
@@ -245,6 +225,10 @@ def build_profile(text, extra=None, current_year=2026):
         "fact_names": lexicon.FACT_NAMES,
         "age": age,
         "age_source": age_source,
+        "age_known": age_known,
+        "age_confidence": age_info["confidence"],
+        "age_evidence": age_info.get("evidence"),
+        "age_rejected": age_info.get("rejected", [])[:4],
         "gender": gender,
         "education_level": _education_level(text),
         "married": any(k in text for k in ("结婚", "老婆", "妻子", "老公", "丈夫")) and "离婚" not in text,
