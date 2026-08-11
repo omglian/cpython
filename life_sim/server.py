@@ -25,6 +25,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from engine import build_profile, simulate  # noqa: E402
+from engine import day as day_engine  # noqa: E402
 from engine.events import load_corpus  # noqa: E402
 
 STATIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
@@ -98,6 +99,21 @@ class Handler(BaseHTTPRequestHandler):
         story, extra = self._extract_inputs(payload)
         if len(story.strip()) < 30:
             self._send(400, {"error": "请至少写 30 个字的人生经历——写得越详细，模拟越像你。"})
+            return
+
+        if self.path == "/api/day":
+            # 逐日模拟：状态在前后端之间来回传，服务端保持无状态。
+            # 没有 state 就是开新的一轮，有 state 就往下生成一天。
+            profile = build_profile(story, extra, current_year=_current_year())
+            state = payload.get("state")
+            if not isinstance(state, dict) or "day_index" not in state:
+                state = day_engine.start(profile, start_year=_current_year())
+            try:
+                day, state = day_engine.next_day(profile, state, seed_text=story)
+            except (KeyError, TypeError, ValueError):
+                self._send(400, {"error": "模拟状态无效，请重新开始。"})
+                return
+            self._send(200, {"day": day, "state": state, "profile": profile})
             return
 
         if self.path == "/api/profile":

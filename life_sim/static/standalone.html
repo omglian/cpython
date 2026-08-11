@@ -85,6 +85,39 @@
   .error { color: var(--bad); margin-top: 10px; }
   .conf-note { margin-top: 10px; padding: 10px; border-left: 3px solid var(--warn);
                background: var(--bg); font-size: 13px; color: var(--dim); }
+  .day-head {
+    display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;
+    padding-bottom: 10px; border-bottom: 1px solid var(--border);
+    margin-bottom: 14px;
+  }
+  .day-date { color: var(--accent); font-size: 16px; }
+  .day-tag {
+    border: 1px solid var(--border); border-radius: 20px;
+    padding: 0 10px; font-size: 12px; color: var(--dim);
+  }
+  .slot { display: flex; gap: 12px; margin-bottom: 12px; align-items: flex-start; }
+  .slot-name {
+    flex: none; width: 3.2em; color: var(--accent); font-size: 13px;
+    padding-top: 2px; opacity: .85;
+  }
+  .slot-entries { flex: 1; }
+  .slot-entries div { margin-bottom: 6px; }
+  .slot-entries div:last-child { margin-bottom: 0; }
+  .entry-thread { color: var(--warn); }
+  .entry-carry { color: var(--dim); font-style: italic; }
+  .day-bars { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 14px;
+              padding-top: 12px; border-top: 1px solid var(--border); }
+  .day-bar { flex: 1; min-width: 92px; }
+  .day-bar-label { font-size: 12px; color: var(--dim); display: flex;
+                   justify-content: space-between; }
+  .day-bar-track { height: 6px; background: var(--bg); border-radius: 3px;
+                   overflow: hidden; margin-top: 3px; }
+  .day-bar-fill { height: 100%; transition: width .5s; }
+  .day-threads { margin-top: 12px; font-size: 13px; color: var(--dim); }
+  .day-threads b { color: var(--warn); font-weight: normal; }
+  .log-day { border-left: 2px solid var(--border); padding-left: 10px;
+             margin-bottom: 8px; font-size: 13px; color: var(--dim); }
+  .log-day b { color: var(--text); font-weight: normal; }
   footer { color: var(--dim); font-size: 12px; margin-top: 40px; text-align: center; }
 </style>
 
@@ -110,6 +143,7 @@
       <button id="btnProfile">生成人物侧写</button>
       <button id="btnSim">开始人生模拟 ▶</button>
       <button id="btnReplay" class="ghost" style="display:none">换一个平行世界重演</button>
+      <button id="btnStartDays" class="ghost">逐日模拟 · 一天一天过 ▷</button>
     </div>
     <div id="err" class="error"></div>
   </div>
@@ -124,6 +158,17 @@
     <div id="simMeta" class="hint" style="margin-bottom:10px"></div>
     <div id="timeline"></div>
     <div id="summary" style="margin-top:16px"></div>
+  </div>
+
+  <div class="panel" id="dayPanel" style="display:none">
+    <h2>④ 逐日模拟 <span class="hint" id="dayCounter"></span></h2>
+    <div id="dayBody"></div>
+    <div class="row" style="margin-top:14px">
+      <button id="btnNextDay">生成下一天 ▶</button>
+      <button id="btnDayLog" class="ghost">看看前几天</button>
+      <button id="btnDayReset" class="ghost">从头开始</button>
+    </div>
+    <div id="dayLog" style="display:none;margin-top:14px"></div>
   </div>
 
   <footer>人生重演 Life Replay · 单机版 v0.1 · 侧写基于大五人格 / Schwartz 价值观 / 成人依恋理论</footer>
@@ -1224,6 +1269,448 @@ function runSim(offset) {
   renderSim(simulate(profile, inp.story, offset));
   $("simPanel").scrollIntoView({behavior: "smooth"});
 }
+/* 逐日模拟常量（由 engine/day.py 导出，勿手改） */
+const DAY_C = {"SLOTS":[["dawn","清晨"],["morning","上午"],["noon","中午"],["afternoon","下午"],["evening","傍晚"],["night","夜里"]],"WEEKDAY_NAMES":["周一","周二","周三","周四","周五","周六","周日"],"SEASONS":[[[3,4,5],"春"],[[6,7,8],"夏"],[[9,10,11],"秋"],[[12,1,2],"冬"]],"WEATHER_BY_SEASON":{"春":["晴","多云","小雨","阴","大风"],"夏":["晴","闷热","雷阵雨","多云","暴雨"],"秋":["晴","多云","阴","小雨","转凉"],"冬":["晴","阴","小雪","寒风","雾霾"]},"THREAD_KINDS":{"project":{"title":"手上的项目","stages":["刚接手","推进中","卡住了","赶工","交付","复盘"],"domain":"career","start_when":"employed","base_chance":0.05,"advance":0.35},"crush":{"title":"一段刚起头的心动","stages":["注意到对方","开始搭话","约了一次","越聊越晚","挑明"],"domain":"romance","start_when":"single","base_chance":0.025,"advance":0.22},"cold":{"title":"一场感冒","stages":["嗓子不舒服","开始发烧","最难受的一天","退烧","痊愈"],"domain":"health","start_when":"always","base_chance":0.012,"advance":0.45},"fitness":{"title":"健身计划","stages":["办了卡","新鲜劲","开始偷懒","重新捡起","成了习惯"],"domain":"health","start_when":"always","base_chance":0.02,"advance":0.2},"jobhunt":{"title":"看新机会","stages":["偷偷改简历","投了几家","接到面试","等结果","有了答复"],"domain":"career","start_when":"employed","base_chance":0.015,"advance":0.25},"family":{"title":"家里的事","stages":["接到电话","放心不下","决定回去","回了一趟","心里踏实了"],"domain":"family","start_when":"always","base_chance":0.02,"advance":0.3},"hobby":{"title":"捡起来的爱好","stages":["买了工具","笨拙地开始","有点上手","做出了个东西"],"domain":"growth","start_when":"always","base_chance":0.025,"advance":0.22},"conflict":{"title":"一点没解开的疙瘩","stages":["起了争执","冷着","有人先开口","说开了"],"domain":"social","start_when":"always","base_chance":0.018,"advance":0.3},"move":{"title":"搬家这件事","stages":["房东涨租","开始看房","定下来了","打包","搬完了"],"domain":"finance","start_when":"always","base_chance":0.008,"advance":0.25}},"THREAD_TEXTS":{"project":["{npc}把一个新项目扔给了你，说不急，但你知道那意味着什么。","项目推进到一半，需求又改了两版。你把改动记在便签上，贴满了半个屏幕。","卡在一个怎么也绕不过去的问题上，你盯着屏幕发了十分钟呆。","为了赶进度，你又留到了很晚。楼里只剩几盏灯还亮着。","东西终于交出去了。{npc}回了个「收到」，你却在工位上坐了好一会儿。","复盘会上大家说了不少漂亮话。你想起那些改需求的夜晚，没说什么。"],"crush":["你注意到{npc}今天换了发型，还多看了两眼——这个念头让你自己愣了一下。","你和{npc}多聊了几句，聊的都是废话，但你回想起来还挺开心。","你和{npc}一起吃了顿饭。散场时谁都没提「下次」，但都知道会有下次。","和{npc}的消息聊到了半夜，明明第二天都要早起。","你把想说的话说了。心跳得厉害，但说完那一刻反而轻松了。"],"cold":["嗓子有点发紧，你灌了杯热水，没当回事。","半夜烧起来了，你翻出退烧药，就着凉水吞了下去。","整个人像被抽空，躺了一天，连手机都不想看。","烧退了，人还是虚。喝粥的时候觉得米汤都是甜的。","终于好利索了。你出门走了两圈，觉得空气都比平时清楚。"],"fitness":["你办了张健身卡，销售说的话你一句没信，卡还是办了。","第三次去健身房，你已经能面不改色地走过器械区了。","今天又没去。你把这事在心里合理化了三遍。","隔了半个月，你重新去了一趟。教练居然还记得你的名字。","不知不觉练成了习惯，不去反而浑身不对劲。"],"jobhunt":["你把简历翻出来改了改，改完又存成了「新建文档(3)」。","投了几家。投完就把招聘软件卸载了，两小时后又装了回来。","接到了面试邀请。你请了半天假，跟{npc}说是去看牙。","面完了，对方说「再联系」。你反复琢磨这三个字的含义。","有结果了。无论好坏，悬着的心总算落了地。"],"family":["{npc}打来电话，说家里都好，你却听出话里有别的意思。","一整天心里都惦记着家里的事，做什么都走神。","你决定回去一趟，订了周末的票。","回了趟家。饭桌上谁都没提那件事，但你知道大家都在想。","回来以后心里踏实了些。有些事说不清，但见一面就是不一样。"],"hobby":["你下单了一套工具，收货那天像拆生日礼物。","第一次动手，做出来的东西丑得很有个性。","练了几次，居然有点样子了。你拍了照，没发出去。","你做成了一个能拿得出手的东西，摆在桌上看了很久。"],"conflict":["和{npc}因为一件小事呛了几句，话赶话，谁都没让。","和{npc}还僵着。今天照面时都装作在看手机。","{npc}主动找你说了句无关的话。台阶递过来了。","你们把话说开了，其实都是些误会。松快了不少。"],"move":["房东通知涨租。你把消息看了三遍，回了个「好的」。","开始看房。中介带你看的第一间，采光好得像样板间，价格也是。","定下来了。签合同的时候手有点抖，还是签了。","打包的时候才发现自己有这么多东西，也有这么多可以扔。","搬完了。新家的第一晚，你在陌生的天花板下躺了很久。"]},"NPC_POOL":{"colleague":["老陈","小林","阿伟","张姐","老王","小周"],"friend":["阿哲","大鹏","小雅","老孟","阿May","胖子"],"family":["妈","爸","姐","哥","妹妹"],"partner":["Ta"],"neighbor":["楼下阿姨","对门大哥","便利店老板"]},"TEMPLATES":[{"id":"d_dawn_01","slot":"dawn","text":"闹钟响的时候天刚亮，你在被窝里跟自己讨价还价了十分钟。","weight":1.2,"effects":{"energy":-2}},{"id":"d_dawn_02","slot":"dawn","text":"你六点就自然醒了，窗外还很安静，你躺着听了一会儿早班公交的声音。","weight":0.8,"trait_bias":{"C":0.5},"effects":{"mood":3}},{"id":"d_dawn_03","slot":"dawn","text":"早饭是昨晚剩的半个面包和一杯热水，站在厨房三分钟解决。","weight":1.0,"requires":{"rest_day":false}},{"id":"d_dawn_04","slot":"dawn","text":"你煎了个蛋，蛋黄没破，这让你觉得今天大概会顺利。","weight":0.8,"effects":{"mood":3}},{"id":"d_dawn_05","slot":"dawn","text":"出门时发现忘带钥匙，又折回去一趟，电梯等了很久。","weight":0.7,"effects":{"mood":-3,"stress":3}},{"id":"d_dawn_06","slot":"dawn","text":"地铁挤得转不过身，你保持着一个别扭的姿势站了四十分钟。","weight":1.0,"requires":{"rest_day":false},"effects":{"energy":-6}},{"id":"d_dawn_07","slot":"dawn","text":"路口的早点摊排了长队，你还是排了，热豆浆握在手里那一刻觉得值。","weight":0.8,"effects":{"mood":4}},{"id":"d_dawn_08","slot":"dawn","text":"外面下着雨，你在门口站了半分钟，还是回屋拿了伞。","weight":0.9,"requires":{"weather":"雨"}},{"id":"d_dawn_09","slot":"dawn","text":"冷空气一下子灌进领口，你把脖子缩进围巾里，走得飞快。","weight":0.9,"requires":{"season":"冬"}},{"id":"d_dawn_10","slot":"dawn","text":"楼下的樱花开了一半，你站在树下看了一会儿，拍了张照。","weight":0.7,"requires":{"season":"春"},"effects":{"mood":3}},{"id":"d_dawn_11","slot":"dawn","text":"你睡到自然醒，看了眼时间，又心安理得地翻了个身。","weight":1.2,"requires":{"rest_day":true},"effects":{"energy":5,"mood":4}},{"id":"d_dawn_12","slot":"dawn","text":"醒来第一件事是摸手机，刷了二十分钟才想起来该起床了。","weight":1.0,"trait_bias":{"C":-0.4},"effects":{"energy":-3}},{"id":"d_dawn_13","slot":"dawn","text":"你实在起不来，请了半天假，然后又睡了回去。","weight":0.4,"requires":{"energy_below":30},"effects":{"energy":12,"mood":-2}},{"id":"d_dawn_14","slot":"dawn","text":"出门前照镜子，发现自己黑眼圈重得像没睡。事实上确实没睡好。","weight":0.7,"requires":{"energy_below":45}},{"id":"d_dawn_15","slot":"dawn","text":"你早起去跑了两公里，回来出了一身汗，整个人都是热的。","weight":0.6,"trait_bias":{"C":0.5},"effects":{"energy":-5,"health":3,"mood":5}},{"id":"d_morn_01","slot":"morning","text":"上午的会开了一个半小时，结论是「下次再议」。","weight":1.1,"requires":{"employed":true,"rest_day":false},"effects":{"energy":-6,"stress":3}},{"id":"d_morn_02","slot":"morning","text":"{colleague}过来问你一个问题，你顺手帮他改了，花了二十分钟。","weight":1.0,"requires":{"employed":true,"rest_day":false},"trait_bias":{"A":0.4}},{"id":"d_morn_03","slot":"morning","text":"你把待办清单重新排了一遍，排完发现最难的那件还在最上面。","weight":0.9,"trait_bias":{"C":0.4},"effects":{"stress":2},"requires":{"rest_day":false}},{"id":"d_morn_04","slot":"morning","text":"邮件堆了三十多封，你从最新的往回处理，处理到一半就想放弃。","weight":0.9,"requires":{"employed":true,"rest_day":false},"effects":{"energy":-5}},{"id":"d_morn_05","slot":"morning","text":"你进入了难得的心流，抬头时已经十一点半，一上午过得飞快。","weight":0.7,"requires":{"energy_above":55},"effects":{"mood":6,"energy":-5}},{"id":"d_morn_06","slot":"morning","text":"工位上的绿植又蔫了，你给它浇了点水，心想它比你能撑。","weight":0.7,"requires":{"employed":true}},{"id":"d_morn_07","slot":"morning","text":"{colleague}拉你去楼下便利店买咖啡，路上聊了些没营养的八卦。","weight":0.9,"requires":{"employed":true,"rest_day":false},"trait_bias":{"E":0.4},"effects":{"mood":3}},{"id":"d_morn_08","slot":"morning","text":"你在上课，讲台上的内容你听懂了七成，剩下三成打算课后再说。","weight":1.0,"requires":{"employed":false,"rest_day":false}},{"id":"d_morn_09","slot":"morning","text":"图书馆的位置被占了，你换了三个地方才坐下。","weight":0.8,"requires":{"employed":false}},{"id":"d_morn_10","slot":"morning","text":"你把攒了一周的衣服洗了，晾满了整个阳台。","weight":1.0,"requires":{"rest_day":true},"effects":{"energy":-5,"mood":3}},{"id":"d_morn_11","slot":"morning","text":"你慢悠悠地做了顿早午饭，边做边放着不知道第几遍的老剧。","weight":1.0,"requires":{"rest_day":true},"effects":{"mood":5}},{"id":"d_morn_12","slot":"morning","text":"群里在讨论周末的安排，你看了半天，最后回了个表情包。","weight":0.8,"trait_bias":{"E":-0.3}},{"id":"d_morn_13","slot":"morning","text":"你把一件拖了很久的小事做完了，比想象中简单，也比想象中轻松。","weight":0.8,"effects":{"stress":-6,"mood":5}},{"id":"d_morn_14","slot":"morning","text":"领导在群里 @ 了所有人，你盯着那条消息看了三遍才确定不是找你。","weight":0.7,"requires":{"employed":true,"rest_day":false},"trait_bias":{"N":0.4},"effects":{"stress":4}},{"id":"d_morn_15","slot":"morning","text":"你在纸上写写画画，理清了一个困扰了好几天的思路。","weight":0.7,"trait_bias":{"O":0.4},"effects":{"mood":5,"stress":-4}},{"id":"d_noon_01","slot":"noon","text":"午饭点了常吃的那家，二十分钟送到，味道和上次一模一样。","weight":1.1},{"id":"d_noon_02","slot":"noon","text":"和{colleague}拼了个饭，聊到一半话题转到了房价，谁都没接下去。","weight":1.0,"requires":{"employed":true,"rest_day":false}},{"id":"d_noon_03","slot":"noon","text":"你趴在桌上眯了二十分钟，醒来手臂麻了半边。","weight":1.0,"requires":{"rest_day":false},"effects":{"energy":8}},{"id":"d_noon_04","slot":"noon","text":"食堂今天的菜出乎意料地好，你还添了半勺。","weight":0.8,"effects":{"mood":4}},{"id":"d_noon_05","slot":"noon","text":"你一个人在楼下走了两圈，晒了会儿太阳才上楼。","weight":0.9,"trait_bias":{"E":-0.3},"effects":{"mood":4,"energy":3}},{"id":"d_noon_06","slot":"noon","text":"忙到忘了吃饭，等想起来的时候已经过了两点，随便对付了几口。","weight":0.7,"requires":{"rest_day":false,"stress_above":55},"effects":{"health":-2,"energy":-4}},{"id":"d_noon_07","slot":"noon","text":"你翻了会儿手机，看到一条几年前关注的博主更新了，恍如隔世。","weight":0.7},{"id":"d_noon_08","slot":"noon","text":"中午和{friend}通了个电话，聊了近况，挂掉后心情好了不少。","weight":0.7,"trait_bias":{"E":0.4},"effects":{"mood":6}},{"id":"d_noon_09","slot":"noon","text":"你在便利店买了个饭团，站在窗边吃完了。窗外人来人往。","weight":0.8},{"id":"d_noon_10","slot":"noon","text":"和{partner}一起吃了午饭，聊的都是琐事，但吃得很舒服。","weight":0.9,"requires":{"partnered":true,"rest_day":true},"effects":{"mood":6}},{"id":"d_aft_01","slot":"afternoon","text":"下午三点是一天里最难熬的时候，你灌了杯咖啡续命。","weight":1.1,"requires":{"rest_day":false},"effects":{"energy":6}},{"id":"d_aft_02","slot":"afternoon","text":"一个临时需求插进来，把你原本的安排全打乱了。","weight":1.0,"requires":{"employed":true,"rest_day":false},"effects":{"stress":8,"mood":-4}},{"id":"d_aft_03","slot":"afternoon","text":"你摸鱼看了二十分钟视频，看完有点心虚，又有点满足。","weight":1.0,"trait_bias":{"C":-0.4},"effects":{"mood":3},"requires":{"rest_day":false}},{"id":"d_aft_04","slot":"afternoon","text":"你和{colleague}为一个方案争了几句，最后各退一步。","weight":0.8,"requires":{"employed":true,"rest_day":false},"trait_bias":{"A":-0.3},"effects":{"stress":4}},{"id":"d_aft_05","slot":"afternoon","text":"你把一件棘手的事情推进了一大截，虽然还没做完，但心里有底了。","weight":0.9,"requires":{"energy_above":45},"effects":{"mood":6,"stress":-5}},{"id":"d_aft_06","slot":"afternoon","text":"窗外突然下起雨来，办公室里有人喊了一声「收衣服」，然后又都笑了。","weight":0.7,"requires":{"weather":"雨"},"effects":{"mood":3}},{"id":"d_aft_07","slot":"afternoon","text":"你去银行/政务大厅办了件事，排队一小时，办理三分钟。","weight":0.6,"requires":{"rest_day":true},"effects":{"energy":-8,"stress":4}},{"id":"d_aft_08","slot":"afternoon","text":"你出门逛了逛，没买什么，就是想在外面待着。","weight":0.9,"requires":{"rest_day":true},"effects":{"mood":5}},{"id":"d_aft_09","slot":"afternoon","text":"你去理了个发，剪完照镜子的时候努力说服自己「过几天就好了」。","weight":0.5,"requires":{"rest_day":true},"effects":{"mood":-2}},{"id":"d_aft_10","slot":"afternoon","text":"你窝在沙发上看完了一整部电影，中途睡着了十分钟。","weight":0.9,"requires":{"rest_day":true},"effects":{"energy":5,"mood":5}},{"id":"d_aft_11","slot":"afternoon","text":"困得撑不住，你在工位上偷偷打了个盹，被吓醒时以为过了很久，其实才五分钟。","weight":0.8,"requires":{"energy_below":40,"rest_day":false}},{"id":"d_aft_12","slot":"afternoon","text":"你收到一条好消息，虽然和你关系不大，但还是跟着高兴了一下。","weight":0.6,"effects":{"mood":5}},{"id":"d_aft_13","slot":"afternoon","text":"你陪家里人去了趟超市，推着车在货架间转了很久。","weight":0.7,"requires":{"rest_day":true},"effects":{"money":-3,"mood":3}},{"id":"d_aft_14","slot":"afternoon","text":"你在阳台上把花草挨个浇了一遍，顺手擦了擦叶子。","weight":0.7,"requires":{"rest_day":true},"effects":{"mood":4,"stress":-3}},{"id":"d_aft_15","slot":"afternoon","text":"你翻出一堆旧东西准备扔，结果每样都拿起来看半天，最后什么也没扔。","weight":0.6,"requires":{"rest_day":true},"trait_bias":{"O":0.3}},{"id":"d_eve_01","slot":"evening","text":"下班路上天已经黑了，路灯一盏盏亮着，你没戴耳机，听了一路车流。","weight":1.0,"requires":{"rest_day":false}},{"id":"d_eve_02","slot":"evening","text":"你去菜市场买了点菜，摊主多送了你两根葱。","weight":0.9,"effects":{"mood":4,"money":-2}},{"id":"d_eve_03","slot":"evening","text":"晚饭做多了，你吃到撑，剩下的装进保鲜盒当明天的午饭。","weight":0.9,"effects":{"mood":3}},{"id":"d_eve_04","slot":"evening","text":"你和{friend}约了顿饭，聊到店里快打烊，出门时凉风一吹，人特别清醒。","weight":0.8,"trait_bias":{"E":0.5},"effects":{"mood":8,"energy":-6,"money":-4}},{"id":"d_eve_05","slot":"evening","text":"你出去走了半小时，绕着小区转了三圈，什么也没想。","weight":0.9,"effects":{"health":2,"stress":-5,"mood":3}},{"id":"d_eve_06","slot":"evening","text":"晚上又留下来加班，等你走的时候整层楼只剩你和保洁阿姨。","weight":0.7,"requires":{"employed":true,"rest_day":false},"effects":{"energy":-12,"stress":8,"mood":-4}},{"id":"d_eve_07","slot":"evening","text":"和{partner}一起收拾了屋子，边收拾边斗嘴，最后谁也没赢。","weight":0.9,"requires":{"partnered":true},"effects":{"mood":6}},{"id":"d_eve_08","slot":"evening","text":"你给家里打了个电话，聊了二十分钟，大部分时间在听。","weight":0.8,"effects":{"mood":5}},{"id":"d_eve_09","slot":"evening","text":"你点了顿好的犒劳自己，吃完摸着肚子觉得这钱花得值。","weight":0.8,"effects":{"mood":6,"money":-4}},{"id":"d_eve_10","slot":"evening","text":"楼下的猫又来蹭你的裤脚，你蹲下摸了两把，它就跑了。","weight":0.7,"effects":{"mood":4}},{"id":"d_eve_11","slot":"evening","text":"你去健身房练了一小时，出来的时候腿有点软，但心情很好。","weight":0.7,"trait_bias":{"C":0.4},"effects":{"health":4,"mood":6,"energy":-8}},{"id":"d_eve_12","slot":"evening","text":"你什么也没干，就靠在沙发上刷手机，一晃就到了十点。","weight":1.0,"requires":{"energy_below":45},"effects":{"mood":-2}},{"id":"d_eve_13","slot":"evening","text":"你把冰箱清了一遍，扔掉两样过期的东西，心里莫名清爽。","weight":0.6,"trait_bias":{"C":0.3},"effects":{"mood":4}},{"id":"d_eve_14","slot":"evening","text":"你和{neighbor}在电梯里聊了两句天气，短短几句，但感觉不错。","weight":0.6,"trait_bias":{"A":0.3},"effects":{"mood":3}},{"id":"d_eve_15","slot":"evening","text":"你翻着外卖软件划了十分钟，最后还是点了那家常吃的。","weight":0.9,"effects":{"money":-3}},{"id":"d_night_01","slot":"night","text":"洗完澡躺在床上，你觉得这是一天里最舒服的十分钟。","weight":1.1,"effects":{"mood":4,"stress":-4}},{"id":"d_night_02","slot":"night","text":"你说好只看一集，结果看到了凌晨一点。","weight":1.0,"trait_bias":{"C":-0.4},"effects":{"energy":-8,"mood":3}},{"id":"d_night_03","slot":"night","text":"躺下之后翻来覆去，脑子里放电影一样过着白天的事。","weight":0.9,"trait_bias":{"N":0.5},"effects":{"energy":-6,"mood":-4}},{"id":"d_night_04","slot":"night","text":"你看了几页书，看到第三页就开始走神，索性关灯睡了。","weight":0.9,"trait_bias":{"O":0.3}},{"id":"d_night_05","slot":"night","text":"你在备忘录里写了几句话，写完自己看了一遍，删掉了一半。","weight":0.7,"trait_bias":{"N":0.3,"O":0.3}},{"id":"d_night_06","slot":"night","text":"你和{friend}的消息聊到很晚，聊的都是些不着边际的事。","weight":0.7,"trait_bias":{"E":0.4},"effects":{"mood":6,"energy":-6}},{"id":"d_night_07","slot":"night","text":"你算了算这个月的开销，算完默默把想买的东西从购物车里删了。","weight":0.7,"effects":{"stress":3}},{"id":"d_night_08","slot":"night","text":"睡前你定了六个闹钟，隐约知道自己一个也不会听。","weight":0.8,"trait_bias":{"C":-0.3}},{"id":"d_night_09","slot":"night","text":"窗外有人在放烟花，你趴在窗台上看完了，才想起来该睡了。","weight":0.5,"effects":{"mood":5}},{"id":"d_night_10","slot":"night","text":"你和{partner}靠在一起看了会儿电视，谁也没说话，很安稳。","weight":0.9,"requires":{"partnered":true},"effects":{"mood":7,"stress":-5}},{"id":"d_night_11","slot":"night","text":"你戴上耳机听了几首老歌，其中一首让你想起了很久以前的事。","weight":0.8,"effects":{"mood":2}},{"id":"d_night_12","slot":"night","text":"洗漱完你在镜子前站了会儿，觉得自己好像比上个月憔悴了些。","weight":0.6,"requires":{"energy_below":40},"trait_bias":{"N":0.4},"effects":{"mood":-4}},{"id":"d_night_13","slot":"night","text":"你难得早早躺下，十一点前就睡着了，睡前还挺为自己骄傲。","weight":0.7,"trait_bias":{"C":0.4},"effects":{"energy":8,"mood":4}},{"id":"d_night_14","slot":"night","text":"你把明天要做的事列了个清单，列完心里踏实了些。","weight":0.8,"trait_bias":{"C":0.5},"effects":{"stress":-5}},{"id":"d_night_15","slot":"night","text":"夜里醒了一次，看了眼手机才三点，又硬撑着睡了回去。","weight":0.6,"requires":{"stress_above":55},"effects":{"energy":-5}},{"id":"d_night_16","slot":"night","text":"你刷到一条陌生人的动态，讲的是和你差不多的处境，看完沉默了一会儿。","weight":0.6,"trait_bias":{"N":0.3}},{"id":"d_night_17","slot":"night","text":"临睡前你把手机扔到床的另一头，逼自己不要再看。","weight":0.6,"trait_bias":{"C":0.3},"effects":{"energy":4}},{"id":"d_dawn_16","slot":"dawn","text":"你比闹钟早醒了十分钟，躺着等它响，那十分钟格外漫长。","weight":0.8},{"id":"d_dawn_17","slot":"dawn","text":"电梯里遇到同层的人，你们对视一秒，各自低头看手机。","weight":0.9},{"id":"d_dawn_18","slot":"dawn","text":"你把昨晚洗好的衣服收进来，还带着点太阳味。","weight":0.7,"effects":{"mood":3}},{"id":"d_dawn_19","slot":"dawn","text":"公交上你抢到了靠窗的位置，一路看着街景发呆。","weight":0.9,"requires":{"rest_day":false}},{"id":"d_dawn_20","slot":"dawn","text":"你出门时被门槛绊了一下，没摔，但心里咯噔一声。","weight":0.6},{"id":"d_dawn_21","slot":"dawn","text":"起床后你先拉开窗帘，光一下涌进来，人也跟着醒了。","weight":0.9,"effects":{"mood":3}},{"id":"d_dawn_22","slot":"dawn","text":"你把牙刷了两遍，因为第一遍走神了完全没印象。","weight":0.6},{"id":"d_dawn_23","slot":"dawn","text":"外卖早餐迟到了二十分钟，你饿着肚子出了门。","weight":0.7,"effects":{"mood":-3}},{"id":"d_dawn_24","slot":"dawn","text":"你在楼下看见环卫工人在扫落叶，扫得很慢，很认真。","weight":0.6,"requires":{"season":"秋"},"effects":{"mood":2}},{"id":"d_dawn_25","slot":"dawn","text":"天太热了，你出门五分钟就后背发潮，只好又回去换了件衣服。","weight":0.7,"requires":{"season":"夏"},"effects":{"mood":-2}},{"id":"d_morn_16","slot":"morning","text":"你花了一上午写一份没人会认真看的文档。","weight":0.9,"requires":{"employed":true,"rest_day":false},"effects":{"mood":-3}},{"id":"d_morn_17","slot":"morning","text":"打印机又卡纸了，你和{colleague}一起蹲在地上研究了十分钟。","weight":0.7,"requires":{"employed":true,"rest_day":false},"effects":{"mood":3}},{"id":"d_morn_18","slot":"morning","text":"你被拉进了一个新群，进去发现自己是唯一一个不知道要干嘛的人。","weight":0.7,"requires":{"rest_day":false},"effects":{"stress":3}},{"id":"d_morn_19","slot":"morning","text":"你趁上午没人打扰，把积压的活儿清掉了一半。","weight":0.9,"requires":{"energy_above":50},"effects":{"stress":-6,"mood":5}},{"id":"d_morn_20","slot":"morning","text":"你在窗边站了会儿，看楼下的人流从稀到密。","weight":0.7,"effects":{"mood":2}},{"id":"d_morn_21","slot":"morning","text":"你收到一个快递，拆开发现是自己上个月下单早忘了的东西。","weight":0.7,"effects":{"mood":4}},{"id":"d_morn_22","slot":"morning","text":"你把桌面整理干净，键盘缝里的灰也擦了，然后才开始干活。","weight":0.7,"trait_bias":{"C":0.4},"effects":{"mood":3}},{"id":"d_morn_23","slot":"morning","text":"你听着播客做事，听完发现内容一点没记住，但活干完了。","weight":0.8},{"id":"d_morn_24","slot":"morning","text":"你在做题/看资料，看到一半开始怀疑自己适不适合这个方向。","weight":0.7,"requires":{"employed":false},"trait_bias":{"N":0.4},"effects":{"mood":-4}},{"id":"d_morn_25","slot":"morning","text":"你把窗户全打开，让风穿堂而过，屋子一下就精神了。","weight":0.8,"requires":{"rest_day":true},"effects":{"mood":4}},{"id":"d_noon_11","slot":"noon","text":"你和{colleague}排队打饭，队伍很长，你们聊完了整整两个话题。","weight":0.8,"requires":{"employed":true,"rest_day":false}},{"id":"d_noon_12","slot":"noon","text":"你尝了家新开的店，味道一般，但环境不错，够了。","weight":0.8,"effects":{"money":-3}},{"id":"d_noon_13","slot":"noon","text":"你中午回了趟家取东西，屋里安静得有点陌生。","weight":0.5},{"id":"d_noon_14","slot":"noon","text":"你边吃边看剧，一集刚好一顿饭的长度，掐得刚刚好。","weight":0.9},{"id":"d_noon_15","slot":"noon","text":"食堂排到你的时候，你想吃的那道菜刚好卖完了。","weight":0.7,"effects":{"mood":-3}},{"id":"d_noon_16","slot":"noon","text":"你在午休时把一直想问的事发了出去，然后一直在等回复。","weight":0.6,"trait_bias":{"N":0.3},"effects":{"stress":4}},{"id":"d_noon_17","slot":"noon","text":"你和{friend}约了午饭，见面第一句是「你怎么瘦了」，第二句是「真的假的」。","weight":0.6,"trait_bias":{"E":0.4},"effects":{"mood":6}},{"id":"d_noon_18","slot":"noon","text":"你午睡做了个乱七八糟的梦，醒来花了半分钟才想起自己在哪。","weight":0.7,"requires":{"rest_day":false}},{"id":"d_aft_16","slot":"afternoon","text":"你把一个做了很久的东西删掉重来，删的时候居然很轻松。","weight":0.6,"trait_bias":{"O":0.3},"effects":{"stress":3}},{"id":"d_aft_17","slot":"afternoon","text":"下午茶时间{colleague}带了点心回来，办公室气氛短暂地好了半小时。","weight":0.8,"requires":{"employed":true,"rest_day":false},"effects":{"mood":5}},{"id":"d_aft_18","slot":"afternoon","text":"你接了个说是「五分钟」的电话，打了四十分钟。","weight":0.8,"requires":{"rest_day":false},"effects":{"energy":-6,"stress":4}},{"id":"d_aft_19","slot":"afternoon","text":"你去了趟医院/诊所，排队时观察了半天来来往往的人。","weight":0.4,"effects":{"energy":-8,"money":-4}},{"id":"d_aft_20","slot":"afternoon","text":"你在咖啡馆坐了一下午，事没干多少，但状态很松弛。","weight":0.8,"requires":{"rest_day":true},"effects":{"mood":5,"stress":-5,"money":-3}},{"id":"d_aft_21","slot":"afternoon","text":"你把家里彻底打扫了一遍，扫完累得瘫在地上，看着干净的屋子傻笑。","weight":0.8,"requires":{"rest_day":true},"trait_bias":{"C":0.3},"effects":{"energy":-12,"mood":7}},{"id":"d_aft_22","slot":"afternoon","text":"你和人在网上因为一件小事争了几句，争完觉得没意义，关掉了。","weight":0.6,"trait_bias":{"A":-0.3},"effects":{"mood":-4}},{"id":"d_aft_23","slot":"afternoon","text":"你午后睡了一觉，醒来天都快黑了，有种荒废又满足的感觉。","weight":0.8,"requires":{"rest_day":true},"effects":{"energy":10,"mood":2}},{"id":"d_aft_24","slot":"afternoon","text":"你查了半天攻略，最后哪也没去，就在家附近转了转。","weight":0.7,"requires":{"rest_day":true}},{"id":"d_aft_25","slot":"afternoon","text":"你被一个小问题卡了两个小时，最后发现是个特别蠢的原因。","weight":0.8,"requires":{"rest_day":false},"effects":{"stress":6,"mood":-3}},{"id":"d_eve_16","slot":"evening","text":"你在回家路上买了个水果，回家洗了半天，吃的时候觉得特别甜。","weight":0.8,"effects":{"mood":4,"money":-2}},{"id":"d_eve_17","slot":"evening","text":"你路过公园，看见有人在跳广场舞，站着看了一会儿。","weight":0.7,"effects":{"mood":3}},{"id":"d_eve_18","slot":"evening","text":"电梯坏了，你爬楼梯上去，爬到一半开始怀疑自己的体力。","weight":0.6,"effects":{"energy":-6}},{"id":"d_eve_19","slot":"evening","text":"你和{partner}为晚上吃什么讨论了二十分钟，最后还是吃了老三样。","weight":0.8,"requires":{"partnered":true},"effects":{"mood":4}},{"id":"d_eve_20","slot":"evening","text":"你临时被叫去帮忙，晚饭拖到了九点才吃上。","weight":0.6,"requires":{"rest_day":false},"effects":{"energy":-8,"mood":-3}},{"id":"d_eve_21","slot":"evening","text":"你把窗帘拉开看了会儿晚霞，颜色好得像假的。","weight":0.7,"effects":{"mood":5}},{"id":"d_eve_22","slot":"evening","text":"你做了顿正经的饭，摆盘拍了照，然后自己吃光了。","weight":0.8,"effects":{"mood":5}},{"id":"d_eve_23","slot":"evening","text":"你去超市补货，推着车逛了一小时，买了一堆计划外的东西。","weight":0.8,"effects":{"money":-5,"mood":3}},{"id":"d_eve_24","slot":"evening","text":"你和{friend}打了会儿游戏，输多赢少，但笑了一晚上。","weight":0.7,"trait_bias":{"E":0.3},"effects":{"mood":6,"energy":-5}},{"id":"d_eve_25","slot":"evening","text":"你什么胃口都没有，随便煮了碗面，边吃边发呆。","weight":0.7,"requires":{"mood_below":45},"effects":{"mood":-2}},{"id":"d_night_18","slot":"night","text":"你洗了个很久的热水澡，出来的时候浴室全是雾。","weight":0.9,"effects":{"stress":-6,"mood":4}},{"id":"d_night_19","slot":"night","text":"你在床上刷到了三年前的照片，看着看着就一点睡意都没有了。","weight":0.7,"effects":{"energy":-5}},{"id":"d_night_20","slot":"night","text":"你把明天的衣服提前搭好放在椅子上，这让你有种掌控感。","weight":0.7,"trait_bias":{"C":0.5},"effects":{"stress":-4}},{"id":"d_night_21","slot":"night","text":"你听着窗外的雨声睡着了，睡得意外地沉。","weight":0.8,"requires":{"weather":"雨"},"effects":{"energy":6,"mood":4}},{"id":"d_night_22","slot":"night","text":"你和家里视频了半小时，挂断后房间显得格外安静。","weight":0.7,"effects":{"mood":4}},{"id":"d_night_23","slot":"night","text":"你熬夜把一件拖了很久的事做完了，做完已经快两点。","weight":0.6,"effects":{"stress":-8,"energy":-12,"mood":5}},{"id":"d_night_24","slot":"night","text":"你躺下才想起来今天忘了一件重要的事，纠结要不要现在爬起来。","weight":0.6,"trait_bias":{"N":0.4},"effects":{"stress":6}},{"id":"d_night_25","slot":"night","text":"你做了个简单的拉伸，做完觉得身体没那么僵了。","weight":0.7,"trait_bias":{"C":0.3},"effects":{"health":2,"stress":-3}},{"id":"d_night_26","slot":"night","text":"你翻着相册删照片，删着删着又把删掉的恢复了几张。","weight":0.6},{"id":"d_night_27","slot":"night","text":"你和{partner}聊了聊各自最近的烦心事，说完都轻松了些。","weight":0.8,"requires":{"partnered":true},"effects":{"mood":6,"stress":-6}},{"id":"d_night_28","slot":"night","text":"夜里下起了雨，你起来关窗，站着听了半分钟才回床上。","weight":0.6,"effects":{"mood":2}}]};
+
+/* ============================================================
+ * 逐日模拟引擎（engine/day.py 的 1:1 移植）
+ * 状态连续 + 剧情线 + 人物记忆 + 近期记忆
+ * ============================================================ */
+
+function dayClamp(v, lo, hi) {
+  lo = (lo === undefined) ? 0 : lo; hi = (hi === undefined) ? 100 : hi;
+  return Math.max(lo, Math.min(hi, v));
+}
+
+function profileMood(profile) {
+  const b5 = profile.big_five;
+  return dayClamp(Math.round(58 - (b5.neuroticism - 50) * 0.3
+                             + (b5.extraversion - 50) * 0.12));
+}
+
+function dayStartState(profile, startYear) {
+  const b5 = profile.big_five;
+  const age = profile.age || 25;
+  const employed = !(age < 23 && (profile.education_level || 1) >= 3);
+  return {
+    day_index: 0,
+    year: startYear || 2026, month: 4, date: 8,
+    weekday: 2, weather: "多云",
+    energy: 70, mood: profileMood(profile),
+    stress: 30 + Math.floor(Math.max(0, b5.neuroticism - 50) / 2),
+    health: dayClamp(95 - Math.max(0, age - 30)),
+    money: 60, age: age,
+    employed: employed, in_school: !employed,
+    partnered: !!profile.married,
+    threads: [], npcs: {}, recent: [], flags: [],
+    streaks: {overtime: 0, early: 0, lonely: 0, goodsleep: 0},
+    slept_late: false, recent_used: [],
+  };
+}
+
+function DaySimJS(profile, state, seedText) {
+  const b5 = profile.big_five;
+  const O = b5.openness, C = b5.conscientiousness, E = b5.extraversion,
+        A = b5.agreeableness, N = b5.neuroticism;
+  const s = state;
+  const rng = makeRng(seedText + "#day", s.day_index);   // 复用侧写用的 PRNG
+  const chance = (p) => rng() < p;
+  const trait = (score, strength) => Math.max(0.1, 1 + (score - 50) / 10 * strength);
+  const pick = (arr) => arr[Math.floor(rng() * arr.length)];
+
+  const templatesBySlot = {};
+  for (const tpl of DAY_C.TEMPLATES) {
+    (templatesBySlot[tpl.slot] = templatesBySlot[tpl.slot] || []).push(tpl);
+  }
+  for (const k in templatesBySlot) {
+    templatesBySlot[k].sort((a, b) => (a.id < b.id ? -1 : 1));
+  }
+
+  function season() {
+    for (const [months, name] of DAY_C.SEASONS) if (months.includes(s.month)) return name;
+    return "春";
+  }
+  const isRestDay = () => s.weekday >= 5;
+
+  function npc(kind) {
+    const known = Object.keys(s.npcs).filter(n => s.npcs[n].kind === kind).sort();
+    let name;
+    if (known.length && chance(0.75)) name = pick(known);
+    else {
+      const pool = (DAY_C.NPC_POOL[kind] || ["某人"]).filter(n => !(n in s.npcs)).sort();
+      name = pool.length ? pick(pool) : (known.length ? pick(known) : "某人");
+    }
+    const info = s.npcs[name] || (s.npcs[name] = {kind: kind, closeness: 50, last_seen: -99, met: 0});
+    info.last_seen = s.day_index; info.met += 1;
+    return name;
+  }
+
+  function advanceCalendar() {
+    const dim = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+    s.date += 1;
+    if (s.date > dim[s.month - 1]) { s.date = 1; s.month += 1; if (s.month > 12) { s.month = 1; s.year += 1; } }
+    s.weekday = (s.weekday + 1) % 7;
+    s.day_index += 1;
+  }
+
+  function rollWeather() {
+    const pool = DAY_C.WEATHER_BY_SEASON[season()];
+    if (pool.includes(s.weather) && chance(0.45)) return s.weather;
+    return pick(pool);
+  }
+
+  function maybeStartThread() {
+    if (s.threads.filter(t => t.stage >= 0).length >= 3) return;
+    for (const kind of Object.keys(DAY_C.THREAD_KINDS).sort()) {
+      const spec = DAY_C.THREAD_KINDS[kind];
+      if (s.threads.some(t => t.kind === kind)) continue;
+      if (spec.start_when === "employed" && !s.employed) continue;
+      if (spec.start_when === "single" && s.partnered) continue;
+      let p = spec.base_chance;
+      if (kind === "hobby") p *= trait(O, 0.15);
+      else if (kind === "fitness") p *= trait(C, 0.12);
+      else if (kind === "crush") p *= trait(E, 0.12);
+      else if (kind === "conflict") p *= trait(100 - A, 0.12);
+      else if (kind === "cold") p *= 1 + Math.max(0, s.stress - 50) / 100;
+      else if (kind === "jobhunt") p *= 1 + Math.max(0, s.stress - 55) / 60;
+      if (chance(p)) {
+        const t = {kind: kind, stage: 0, started: s.day_index, npc: null, last_advance: s.day_index};
+        if (["project", "jobhunt", "conflict"].includes(kind)) t.npc = npc("colleague");
+        else if (kind === "crush") t.npc = npc(chance(0.5) ? "colleague" : "friend");
+        else if (kind === "family") t.npc = npc("family");
+        s.threads.push(t);
+        return;
+      }
+    }
+  }
+
+  const THREAD_SLOT = {
+    project: ["morning", "afternoon", "afternoon", "night", "afternoon", "morning"],
+    crush: ["morning", "noon", "evening", "night", "evening"],
+    cold: ["dawn", "night", "afternoon", "dawn", "morning"],
+    fitness: ["evening", "evening", "night", "evening", "dawn"],
+    jobhunt: ["night", "night", "morning", "afternoon", "morning"],
+    family: ["evening", "noon", "night", "afternoon", "night"],
+    hobby: ["evening", "evening", "night", "evening"],
+    conflict: ["morning", "noon", "afternoon", "evening"],
+    move: ["evening", "afternoon", "evening", "night", "night"],
+  };
+
+  function threadEffects(kind, stage) {
+    if (kind === "project") {
+      if (stage === 3) { s.stress = dayClamp(s.stress + 10); s.energy = dayClamp(s.energy - 15); s.streaks.overtime += 1; }
+      else if (stage === 4) { s.stress = dayClamp(s.stress - 15); s.mood = dayClamp(s.mood + 8); }
+    } else if (kind === "cold") {
+      if (stage <= 2) { s.health = dayClamp(s.health - 6); s.energy = dayClamp(s.energy - 20); s.mood = dayClamp(s.mood - 5); }
+      else s.health = dayClamp(s.health + 5);
+    } else if (kind === "crush") {
+      s.mood = dayClamp(s.mood + 6);
+      if (stage === 4) { s.partnered = true; s.flags.push("in_relationship"); }
+    } else if (kind === "fitness") {
+      if (stage === 1 || stage === 4) { s.health = dayClamp(s.health + 3); s.mood = dayClamp(s.mood + 3); }
+    } else if (kind === "conflict") {
+      if (stage <= 1) { s.mood = dayClamp(s.mood - 6); s.stress = dayClamp(s.stress + 5); }
+      else s.mood = dayClamp(s.mood + 6);
+    } else if (kind === "family") {
+      if (stage <= 1) s.stress = dayClamp(s.stress + 6); else s.mood = dayClamp(s.mood + 4);
+    } else if (kind === "move") {
+      if (stage >= 3) { s.energy = dayClamp(s.energy - 12); s.money = dayClamp(s.money - 10); }
+    }
+  }
+
+  function advanceThreads(day) {
+    const finished = [];
+    for (const t of s.threads) {
+      const spec = DAY_C.THREAD_KINDS[t.kind], texts = DAY_C.THREAD_TEXTS[t.kind];
+      const justStarted = t.started === s.day_index;
+      const gap = s.day_index - t.last_advance;
+      if (!(justStarted || (gap >= 1 && chance(spec.advance)))) continue;
+      const idx = Math.min(t.stage, texts.length - 1);
+      const text = texts[idx].replace("{npc}", t.npc || "对方").replace("{npc}", t.npc || "对方");
+      const seq = THREAD_SLOT[t.kind] || ["afternoon"];
+      day.slots[seq[Math.min(idx, seq.length - 1)]].push({text: text, thread: t.kind});
+      day.threads.push({kind: t.kind, title: spec.title, stage: idx + 1, total: texts.length,
+                        stage_name: spec.stages[Math.min(idx, spec.stages.length - 1)]});
+      threadEffects(t.kind, idx);
+      if (!justStarted) t.last_advance = s.day_index;
+      t.stage = idx + 1;
+      if (t.stage >= texts.length) finished.push(t);
+    }
+    for (const t of finished) { s.threads.splice(s.threads.indexOf(t), 1); s.flags.push("done:" + t.kind); }
+  }
+
+  function templateFits(tpl) {
+    const need = tpl.requires || {};
+    if ("rest_day" in need && !!need.rest_day !== isRestDay()) return false;
+    if ("employed" in need && !!need.employed !== s.employed) return false;
+    if ("partnered" in need && !!need.partnered !== s.partnered) return false;
+    if ("min_age" in need && s.age < need.min_age) return false;
+    if ("max_age" in need && s.age > need.max_age) return false;
+    if ("energy_below" in need && s.energy >= need.energy_below) return false;
+    if ("energy_above" in need && s.energy <= need.energy_above) return false;
+    if ("stress_above" in need && s.stress <= need.stress_above) return false;
+    if ("mood_below" in need && s.mood >= need.mood_below) return false;
+    if ("season" in need && need.season !== season()) return false;
+    if ("weather" in need && !s.weather.includes(need.weather)) return false;
+    return true;
+  }
+
+  function pickTemplate(slot, day) {
+    const pool = [], weights = [];
+    for (const tpl of (templatesBySlot[slot] || [])) {
+      if (!templateFits(tpl)) continue;
+      if (day._used.has(tpl.id)) continue;
+      let w = tpl.weight === undefined ? 1 : tpl.weight;
+      for (const [key, bias] of Object.entries(tpl.trait_bias || {})) {
+        const score = {O: O, C: C, E: E, A: A, N: N}[key] || 50;
+        w *= Math.max(0.05, 1 + (score - 50) / 50 * bias);
+      }
+      if ((s.recent_used || []).includes(tpl.id)) w *= 0.12;
+      pool.push(tpl); weights.push(w);
+    }
+    if (!pool.length) return null;
+    const total = weights.reduce((a, b) => a + b, 0);
+    let r = rng() * total;
+    for (let i = 0; i < pool.length; i++) { r -= weights[i]; if (r <= 0) return pool[i]; }
+    return pool[pool.length - 1];
+  }
+
+  function render(tpl) {
+    let text = tpl.text;
+    for (const kind of ["colleague", "friend", "family", "neighbor"]) {
+      const token = "{" + kind + "}";
+      while (text.includes(token)) text = text.replace(token, npc(kind));
+    }
+    if (text.includes("{partner}")) text = text.replace("{partner}", npc("partner"));
+    return text;
+  }
+
+  function applyEffects(tpl) {
+    for (let [key, delta] of Object.entries(tpl.effects || {})) {
+      if (!["energy", "mood", "stress", "health", "money"].includes(key)) continue;
+      if (key === "mood") delta *= (delta > 0) ? trait(E, 0.06) : trait(N, 0.06);
+      else if (key === "stress" && delta > 0) delta *= trait(N, 0.05);
+      s[key] = dayClamp(s[key] + Math.round(delta));
+    }
+    for (const flag of tpl.set_flags || []) if (!s.flags.includes(flag)) s.flags.push(flag);
+  }
+
+  function carryoverLines() {
+    const lines = [];
+    if (s.slept_late) { lines.push(["dawn", "昨晚睡得太晚，闹钟响了三遍你才挣扎着坐起来。"]); s.energy = dayClamp(s.energy - 10); }
+    if (s.streaks.overtime >= 3) { lines.push(["morning", "连着加了几天班，你端着咖啡的手都有点抖。"]); s.health = dayClamp(s.health - 3); }
+    if (s.streaks.early >= 4) lines.push(["dawn", `连续早起到第${s.streaks.early}天，你发现天亮的时间在慢慢变早。`]);
+    if (s.energy < 30) lines.push(["afternoon", "整个下午你都在和困意搏斗，效率低得可怕。"]);
+    if (s.stress > 75 && N > 55) { lines.push(["night", "躺下之后脑子反而清醒，那些没做完的事一件件浮上来。"]); s.mood = dayClamp(s.mood - 4); }
+    for (const name of Object.keys(s.npcs).sort()) {
+      const info = s.npcs[name];
+      if (s.day_index - (info.last_seen || 0) > 20 && (info.met || 0) >= 2 && chance(0.12)) {
+        lines.push(["night", `你忽然想起好久没联系${name}了，翻到聊天框却没发出消息。`]);
+        info.last_seen = s.day_index;
+        break;
+      }
+    }
+    return lines;
+  }
+
+  function daySummary(day) {
+    if (day.threads.length) return day.threads[day.threads.length - 1].title + "有了进展。";
+    if (s.energy < 30) return "累得像被抽干的一天。";
+    if (s.mood >= 70) return "心情不错的一天。";
+    if (s.mood <= 35) return "有点低落的一天。";
+    if (isRestDay()) return "松散但不算浪费的一天。";
+    return "平平常常的一天。";
+  }
+
+  function endOfDay(day) {
+    const nightText = day.slots.night.map(e => e.text).join(" ");
+    s.slept_late = ["熬", "半夜", "睡不着", "两点"].some(k => nightText.includes(k));
+    let recover = isRestDay() ? 30 : 24;
+    recover -= Math.floor(Math.max(0, s.stress - 45) / 3);
+    recover -= Math.floor(Math.max(0, 70 - s.health) / 6);
+    if (s.slept_late) recover -= 14;
+    const ceiling = 92 - Math.floor(Math.max(0, s.stress - 50) / 2);
+    s.energy = dayClamp(Math.min(s.energy + Math.max(6, recover), ceiling));
+
+    const stressBase = dayClamp(28 + (N - 50) * 0.45 - (C - 50) * 0.1);
+    s.stress = dayClamp(Math.round(s.stress * 0.78 + stressBase * 0.22));
+    if (!isRestDay() && s.employed) s.stress = dayClamp(s.stress + 2);
+
+    const moodBase = 55 - (N - 50) * 0.3 + (E - 50) * 0.12;
+    s.mood = dayClamp(Math.round(s.mood * 0.58 + moodBase * 0.42));
+
+    let drift = 0;
+    if (s.stress > 60) drift -= 0.5;
+    if (s.slept_late) drift -= 0.3;
+    if (s.energy > 70 && s.stress < 45) drift += 0.4;
+    if (s.age > 40) drift -= 0.1;
+    s.health = dayClamp(Math.round((s.health + drift) * 10) / 10);
+
+    if (!s.employed) s.money = dayClamp(s.money - 1);
+    else if (isRestDay()) s.money = dayClamp(s.money - 2);
+    else s.money = dayClamp(s.money + 1);
+
+    const eveNight = day.slots.night.concat(day.slots.evening);
+    if (s.streaks.overtime && !eveNight.some(e => e.text.includes("加班") || e.text.includes("留到"))) s.streaks.overtime = 0;
+    if (day.slots.dawn.some(e => e.text.includes("早起") || e.text.includes("六点"))) s.streaks.early += 1;
+    else s.streaks.early = 0;
+
+    if (s.month === 4 && s.date === 8 && s.day_index > 0) s.age += 1;
+
+    s.recent_used = (s.recent_used || []).concat(day._usedIds.slice().sort()).slice(-28);
+    day.summary = daySummary(day);
+    s.recent.push({day: s.day_index, summary: day.summary});
+    s.recent = s.recent.slice(-5);
+  }
+
+  this.simulateDay = function () {
+    advanceCalendar();
+    s.weather = rollWeather();
+    const day = {
+      day_index: s.day_index,
+      date_text: `${s.year}年${s.month}月${s.date}日 ${DAY_C.WEEKDAY_NAMES[s.weekday]}`,
+      weather: s.weather, season: season(), is_rest_day: isRestDay(),
+      slots: {}, threads: [], _used: new Set(), _usedIds: [],
+    };
+    for (const [key] of DAY_C.SLOTS) day.slots[key] = [];
+
+    for (const [slot, text] of carryoverLines()) day.slots[slot].push({text: text, carryover: true});
+    maybeStartThread();
+    advanceThreads(day);
+
+    const counts = {dawn: 1, morning: 2, noon: 1, afternoon: 2, evening: 2, night: 2};
+    if (isRestDay()) { counts.morning = 1; counts.afternoon = 2; counts.evening = 2; }
+    if (s.energy < 25) for (const k in counts) counts[k] = Math.max(1, counts[k] - 1);
+
+    for (const [slotKey] of DAY_C.SLOTS) {
+      const need = counts[slotKey] - day.slots[slotKey].length;
+      for (let i = 0; i < Math.max(0, need); i++) {
+        const tpl = pickTemplate(slotKey, day);
+        if (!tpl) break;
+        day._used.add(tpl.id); day._usedIds.push(tpl.id);
+        day.slots[slotKey].push({text: render(tpl)});
+        applyEffects(tpl);
+      }
+    }
+
+    endOfDay(day);
+
+    const outSlots = [];
+    for (const [key, name] of DAY_C.SLOTS) {
+      if (day.slots[key].length) outSlots.push({key: key, name: name, entries: day.slots[key].map(e => e.text)});
+    }
+    day.slots = outSlots;
+    delete day._used; delete day._usedIds;
+    day.state = {energy: Math.round(s.energy), mood: Math.round(s.mood),
+                 stress: Math.round(s.stress), health: Math.round(s.health),
+                 money: Math.round(s.money)};
+    day.active_threads = s.threads.map(t => ({
+      title: DAY_C.THREAD_KINDS[t.kind].title,
+      stage_name: DAY_C.THREAD_KINDS[t.kind].stages[
+        Math.min(t.stage, DAY_C.THREAD_KINDS[t.kind].stages.length - 1)],
+      stage: t.stage, total: DAY_C.THREAD_TEXTS[t.kind].length,
+    }));
+    day.known_people = Object.keys(s.npcs).map(n => ({
+      name: n, met: s.npcs[n].met, days_since: s.day_index - s.npcs[n].last_seen,
+    })).sort((a, b) => (a.days_since - b.days_since) || (a.name < b.name ? -1 : 1)).slice(0, 6);
+    return day;
+  };
+}
+
+function simulateNextDay(profile, state, seedText) {
+  const sim = new DaySimJS(profile, state, seedText);
+  return sim.simulateDay();
+}
+
+/* ---------------------------- 逐日模拟界面 ---------------------------- */
+let dayState = null;
+let dayHistory = [];
+
+function barColor(key, val) {
+  if (key === "stress") return val > 65 ? "var(--bad)" : val > 45 ? "var(--warn)" : "var(--good)";
+  return val < 35 ? "var(--bad)" : val < 60 ? "var(--warn)" : "var(--good)";
+}
+
+function renderDay(day) {
+  const tags = [day.weather, day.is_rest_day ? "休息日" : "工作日", day.season];
+  let html = `<div class="day-head">`
+    + `<span class="day-date">${esc(day.date_text)}</span>`
+    + tags.map(t => `<span class="day-tag">${esc(t)}</span>`).join("")
+    + `</div>`;
+
+  for (const slot of day.slots) {
+    html += `<div class="slot"><span class="slot-name">${esc(slot.name)}</span>`
+      + `<div class="slot-entries">`
+      + slot.entries.map(e => `<div>${esc(e)}</div>`).join("")
+      + `</div></div>`;
+  }
+
+  const labels = {energy: "精力", mood: "心情", stress: "压力", health: "健康", money: "余钱"};
+  html += `<div class="day-bars">`;
+  for (const [key, label] of Object.entries(labels)) {
+    const v = day.state[key];
+    html += `<div class="day-bar"><div class="day-bar-label"><span>${label}</span><span>${v}</span></div>`
+      + `<div class="day-bar-track"><div class="day-bar-fill" style="width:${v}%;background:${barColor(key, v)}"></div></div></div>`;
+  }
+  html += `</div>`;
+
+  if (day.active_threads && day.active_threads.length) {
+    html += `<div class="day-threads">进行中：`
+      + day.active_threads.map(t =>
+          `<b>${esc(t.title)}</b>（${esc(t.stage_name)} ${t.stage}/${t.total}）`).join("　")
+      + `</div>`;
+  }
+  if (day.known_people && day.known_people.length) {
+    html += `<div class="day-threads">最近打过交道：`
+      + day.known_people.slice(0, 5).map(pp =>
+          esc(pp.name) + (pp.days_since > 3 ? `（${pp.days_since}天没见）` : "")).join("、")
+      + `</div>`;
+  }
+
+  $("dayBody").innerHTML = html;
+  $("dayCounter").textContent = `第 ${day.day_index} 天`;
+  $("dayPanel").style.display = "";
+}
+
+function renderDayLog() {
+  if (!dayHistory.length) { $("dayLog").innerHTML = `<span class="hint">还没有记录。</span>`; return; }
+  $("dayLog").innerHTML = dayHistory.slice().reverse().map(d =>
+    `<div class="log-day"><b>${esc(d.date_text)}</b>　${esc(d.summary || "")}</div>`).join("");
+}
+
+function resetDays() {
+  dayState = null;
+  dayHistory = [];
+  $("dayBody").innerHTML = "";
+  $("dayLog").style.display = "none";
+  $("dayCounter").textContent = "";
+  $("btnNextDay").textContent = "生成第一天 ▶";
+}
+
 $("btnSim").addEventListener("click", () => { seedOffset = 0; runSim(0); });
 $("btnReplay").addEventListener("click", () => { seedOffset++; runSim(seedOffset); });
+
+/* ---- 逐日模拟：一次一天，看完再决定要不要继续 ---- */
+function stepDay() {
+  const inp = inputs();
+  if (!validate(inp.story)) return;
+  const profile = buildProfile(inp.story, inp);
+  if (!dayState) dayState = dayStartState(profile, new Date().getFullYear());
+  const day = simulateNextDay(profile, dayState, inp.story);
+  dayHistory.push({date_text: day.date_text, summary: day.summary});
+  renderDay(day);
+  $("btnNextDay").textContent = "再过一天 ▶";
+  if (dayHistory.length > 1) renderDayLog();
+  $("dayPanel").scrollIntoView({behavior: "smooth", block: "start"});
+}
+$("btnStartDays").addEventListener("click", () => { resetDays(); stepDay(); });
+$("btnNextDay").addEventListener("click", stepDay);
+$("btnDayReset").addEventListener("click", () => { resetDays(); stepDay(); });
+$("btnDayLog").addEventListener("click", () => {
+  const box = $("dayLog");
+  const show = box.style.display === "none";
+  box.style.display = show ? "" : "none";
+  $("btnDayLog").textContent = show ? "收起记录" : "看看前几天";
+  if (show) renderDayLog();
+});
 </script>

@@ -87,6 +87,39 @@
   .error { color: var(--bad); margin-top: 10px; }
   .conf-note { margin-top: 10px; padding: 10px; border-left: 3px solid var(--warn);
                background: var(--bg); font-size: 13px; color: var(--dim); }
+  .day-head {
+    display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;
+    padding-bottom: 10px; border-bottom: 1px solid var(--border);
+    margin-bottom: 14px;
+  }
+  .day-date { color: var(--accent); font-size: 16px; }
+  .day-tag {
+    border: 1px solid var(--border); border-radius: 20px;
+    padding: 0 10px; font-size: 12px; color: var(--dim);
+  }
+  .slot { display: flex; gap: 12px; margin-bottom: 12px; align-items: flex-start; }
+  .slot-name {
+    flex: none; width: 3.2em; color: var(--accent); font-size: 13px;
+    padding-top: 2px; opacity: .85;
+  }
+  .slot-entries { flex: 1; }
+  .slot-entries div { margin-bottom: 6px; }
+  .slot-entries div:last-child { margin-bottom: 0; }
+  .entry-thread { color: var(--warn); }
+  .entry-carry { color: var(--dim); font-style: italic; }
+  .day-bars { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 14px;
+              padding-top: 12px; border-top: 1px solid var(--border); }
+  .day-bar { flex: 1; min-width: 92px; }
+  .day-bar-label { font-size: 12px; color: var(--dim); display: flex;
+                   justify-content: space-between; }
+  .day-bar-track { height: 6px; background: var(--bg); border-radius: 3px;
+                   overflow: hidden; margin-top: 3px; }
+  .day-bar-fill { height: 100%; transition: width .5s; }
+  .day-threads { margin-top: 12px; font-size: 13px; color: var(--dim); }
+  .day-threads b { color: var(--warn); font-weight: normal; }
+  .log-day { border-left: 2px solid var(--border); padding-left: 10px;
+             margin-bottom: 8px; font-size: 13px; color: var(--dim); }
+  .log-day b { color: var(--text); font-weight: normal; }
   footer { color: var(--dim); font-size: 12px; margin-top: 40px; text-align: center; }
 </style>
 </head>
@@ -112,6 +145,7 @@
       <button id="btnProfile">生成人物侧写</button>
       <button id="btnSim">开始人生模拟 ▶</button>
       <button id="btnReplay" class="ghost" style="display:none">换一个平行世界重演</button>
+      <button id="btnStartDays" class="ghost">逐日模拟 · 一天一天过 ▷</button>
     </div>
     <div id="err" class="error"></div>
   </div>
@@ -126,6 +160,17 @@
     <div id="simMeta" class="hint" style="margin-bottom:10px"></div>
     <div id="timeline"></div>
     <div id="summary" style="margin-top:16px"></div>
+  </div>
+
+  <div class="panel" id="dayPanel" style="display:none">
+    <h2>④ 逐日模拟 <span class="hint" id="dayCounter"></span></h2>
+    <div id="dayBody"></div>
+    <div class="row" style="margin-top:14px">
+      <button id="btnNextDay">生成下一天 ▶</button>
+      <button id="btnDayLog" class="ghost">看看前几天</button>
+      <button id="btnDayReset" class="ghost">从头开始</button>
+    </div>
+    <div id="dayLog" style="display:none;margin-top:14px"></div>
   </div>
 
   <footer>人生重演 Life Replay · 规则引擎 v0.1 · 侧写基于大五人格 / Schwartz 价值观 / 成人依恋理论</footer>
@@ -299,6 +344,103 @@ async function doSim(offset) {
 }
 
 $("btnProfile").addEventListener("click", doProfile);
+/* ---------------------------- 逐日模拟界面 ---------------------------- */
+let dayState = null;
+let dayHistory = [];
+
+function barColor(key, val) {
+  if (key === "stress") return val > 65 ? "var(--bad)" : val > 45 ? "var(--warn)" : "var(--good)";
+  return val < 35 ? "var(--bad)" : val < 60 ? "var(--warn)" : "var(--good)";
+}
+
+function renderDay(day) {
+  const tags = [day.weather, day.is_rest_day ? "休息日" : "工作日", day.season];
+  let html = `<div class="day-head">`
+    + `<span class="day-date">${esc(day.date_text)}</span>`
+    + tags.map(t => `<span class="day-tag">${esc(t)}</span>`).join("")
+    + `</div>`;
+
+  for (const slot of day.slots) {
+    html += `<div class="slot"><span class="slot-name">${esc(slot.name)}</span>`
+      + `<div class="slot-entries">`
+      + slot.entries.map(e => `<div>${esc(e)}</div>`).join("")
+      + `</div></div>`;
+  }
+
+  const labels = {energy: "精力", mood: "心情", stress: "压力", health: "健康", money: "余钱"};
+  html += `<div class="day-bars">`;
+  for (const [key, label] of Object.entries(labels)) {
+    const v = day.state[key];
+    html += `<div class="day-bar"><div class="day-bar-label"><span>${label}</span><span>${v}</span></div>`
+      + `<div class="day-bar-track"><div class="day-bar-fill" style="width:${v}%;background:${barColor(key, v)}"></div></div></div>`;
+  }
+  html += `</div>`;
+
+  if (day.active_threads && day.active_threads.length) {
+    html += `<div class="day-threads">进行中：`
+      + day.active_threads.map(t =>
+          `<b>${esc(t.title)}</b>（${esc(t.stage_name)} ${t.stage}/${t.total}）`).join("　")
+      + `</div>`;
+  }
+  if (day.known_people && day.known_people.length) {
+    html += `<div class="day-threads">最近打过交道：`
+      + day.known_people.slice(0, 5).map(pp =>
+          esc(pp.name) + (pp.days_since > 3 ? `（${pp.days_since}天没见）` : "")).join("、")
+      + `</div>`;
+  }
+
+  $("dayBody").innerHTML = html;
+  $("dayCounter").textContent = `第 ${day.day_index} 天`;
+  $("dayPanel").style.display = "";
+}
+
+function renderDayLog() {
+  if (!dayHistory.length) { $("dayLog").innerHTML = `<span class="hint">还没有记录。</span>`; return; }
+  $("dayLog").innerHTML = dayHistory.slice().reverse().map(d =>
+    `<div class="log-day"><b>${esc(d.date_text)}</b>　${esc(d.summary || "")}</div>`).join("");
+}
+
+function resetDays() {
+  dayState = null;
+  dayHistory = [];
+  $("dayBody").innerHTML = "";
+  $("dayLog").style.display = "none";
+  $("dayCounter").textContent = "";
+  $("btnNextDay").textContent = "生成第一天 ▶";
+}
+
+/* 服务器版：每天向后端要一天，状态在前后端之间来回传 */
+async function stepDay() {
+  const inp = inputs();
+  if (!validate(inp.story)) return;
+  $("btnNextDay").disabled = true;
+  try {
+    const body = Object.assign({}, inp);
+    if (dayState) body.state = dayState;
+    const data = await call("/api/day", body);
+    dayState = data.state;
+    dayHistory.push({date_text: data.day.date_text, summary: data.day.summary});
+    renderDay(data.day);
+    $("btnNextDay").textContent = "再过一天 ▶";
+    if (dayHistory.length > 1) renderDayLog();
+    $("dayPanel").scrollIntoView({behavior: "smooth", block: "start"});
+  } catch (e) {
+    $("err").textContent = e.message;
+  } finally {
+    $("btnNextDay").disabled = false;
+  }
+}
+$("btnStartDays").addEventListener("click", () => { resetDays(); stepDay(); });
+$("btnNextDay").addEventListener("click", stepDay);
+$("btnDayReset").addEventListener("click", () => { resetDays(); stepDay(); });
+$("btnDayLog").addEventListener("click", () => {
+  const box = $("dayLog");
+  const show = box.style.display === "none";
+  box.style.display = show ? "" : "none";
+  $("btnDayLog").textContent = show ? "收起记录" : "看看前几天";
+  if (show) renderDayLog();
+});
+
 $("btnSim").addEventListener("click", () => { seedOffset = 0; doSim(0); });
 $("btnReplay").addEventListener("click", () => { seedOffset += 1; doSim(seedOffset); });
 </script>

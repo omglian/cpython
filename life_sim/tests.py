@@ -232,6 +232,124 @@ class TestAgeExtraction(unittest.TestCase):
         self.assertIn("1995", p["age_evidence"])
 
 
+class TestDaySimulation(unittest.TestCase):
+    """逐日模拟：一次一天，状态连续，剧情线跨天。"""
+
+    STORY = ("我1995年出生，内向，喜欢一个人看书画画。"
+             "工作压力大，经常焦虑失眠内耗。")
+
+    def setUp(self):
+        from engine import day as day_engine
+        self.D = day_engine
+        self.profile = build_profile(self.STORY, current_year=2026)
+
+    def run_days(self, n, story=None):
+        story = story or self.STORY
+        profile = build_profile(story, current_year=2026)
+        state = self.D.start(profile, start_year=2026)
+        days = []
+        for _ in range(n):
+            day, state = self.D.next_day(profile, state, seed_text=story)
+            days.append(day)
+        return days, state
+
+    def test_day_has_multiple_slots_and_entries(self):
+        """一天要有分时段的多条内容，不能是一句话。"""
+        days, _ = self.run_days(3)
+        for day in days:
+            self.assertGreaterEqual(len(day["slots"]), 4, "一天至少要有 4 个时段")
+            total = sum(len(s["entries"]) for s in day["slots"])
+            self.assertGreaterEqual(total, 7, "一天至少要有 7 条具体的事")
+
+    def test_calendar_advances_one_day_at_a_time(self):
+        days, _ = self.run_days(9)
+        self.assertEqual([d["day_index"] for d in days], list(range(1, 10)))
+        weekdays = [d["date_text"][-2:] for d in days]
+        self.assertEqual(len(set(weekdays)), 7, "九天应覆盖一整周的星期")
+
+    def test_state_carries_over_between_days(self):
+        """状态必须逐日结转，而不是每天重置。"""
+        days, state = self.run_days(10)
+        energies = [d["state"]["energy"] for d in days]
+        self.assertGreater(len(set(energies)), 3, "精力应当每天变化")
+        self.assertEqual(state["day_index"], 10)
+
+    def test_stress_regresses_to_personality_baseline(self):
+        """高神经质的人压力基线更高——这是"像他本人"的一部分。"""
+        anxious = ("我1995年出生，特别容易焦虑，经常失眠内耗，"
+                   "很自卑，总是想太多，压力很大。")
+        calm = ("我1995年出生，心态特别好，凡事想得开，"
+                "乐观，没什么烦心事，很淡定。")
+        a_days, _ = self.run_days(15, anxious)
+        c_days, _ = self.run_days(15, calm)
+        a_stress = sum(d["state"]["stress"] for d in a_days) / len(a_days)
+        c_stress = sum(d["state"]["stress"] for d in c_days) / len(c_days)
+        self.assertGreater(a_stress, c_stress + 5,
+                           "焦虑型的平均压力应明显高于乐观型")
+
+    def test_threads_span_multiple_days(self):
+        """剧情线是跨天的：同一条线要在不同的天里推进。"""
+        days, _ = self.run_days(60)
+        seen = {}
+        for day in days:
+            for t in day["threads"]:
+                seen.setdefault(t["kind"], []).append(t["stage"])
+        self.assertTrue(seen, "60 天里应当至少开出一条剧情线")
+        multi = [k for k, stages in seen.items() if len(stages) >= 2]
+        self.assertTrue(multi, "应当有剧情线跨越多天推进")
+        for kind in multi:
+            # 一条线走完后可以再开一条同类的新线，所以阶段序列是
+            # 若干段递增的run；只要每段内部递增、重启时回到 1 即可。
+            stages = seen[kind]
+            for prev, cur in zip(stages, stages[1:]):
+                self.assertTrue(cur == prev + 1 or cur == 1,
+                                "%s 阶段跳变: %s" % (kind, stages))
+
+    def test_people_are_remembered_and_recur(self):
+        """出现过的人要被记住，并且会再次出现。"""
+        days, state = self.run_days(30)
+        self.assertTrue(state["npcs"], "应当记住出现过的人")
+        recurring = [n for n, i in state["npcs"].items() if i["met"] >= 2]
+        self.assertTrue(recurring, "应当有人物反复出现，而不是每天换新人")
+
+    def test_recent_memory_is_bounded(self):
+        _days, state = self.run_days(12)
+        self.assertLessEqual(len(state["recent"]), 5, "近期记忆应有上限")
+        self.assertLessEqual(len(state["recent_used"]), 28)
+
+    def test_same_story_replays_same_days(self):
+        a, _ = self.run_days(6)
+        b, _ = self.run_days(6)
+        self.assertEqual([d["slots"] for d in a], [d["slots"] for d in b],
+                         "同一段经历应重演出同一串日子")
+
+    def test_rest_days_differ_from_workdays(self):
+        days, _ = self.run_days(14)
+        rest = [d for d in days if d["is_rest_day"]]
+        work = [d for d in days if not d["is_rest_day"]]
+        self.assertTrue(rest and work)
+        rest_text = " ".join(e for d in rest for s in d["slots"]
+                             for e in s["entries"])
+        self.assertNotIn("摸鱼", rest_text, "休息日不该出现上班才有的事")
+
+    def test_state_stays_in_range(self):
+        days, _ = self.run_days(40)
+        for day in days:
+            for key, val in day["state"].items():
+                self.assertTrue(0 <= val <= 100, "%s 越界: %s" % (key, val))
+
+    def test_templates_are_valid(self):
+        tpls = self.D.load_templates()
+        self.assertTrue(tpls, "应当加载到日常事件模板")
+        slots = {k for k, _n in self.D.SLOTS}
+        seen_ids = set()
+        for slot, items in tpls.items():
+            self.assertIn(slot, slots, "未知时段: %s" % slot)
+            for tpl in items:
+                self.assertNotIn(tpl["id"], seen_ids, "模板 id 重复: %s" % tpl["id"])
+                seen_ids.add(tpl["id"])
+
+
 class TestEventCorpus(unittest.TestCase):
 
     def test_default_corpus_loads_and_validates(self):

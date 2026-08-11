@@ -1,0 +1,1614 @@
+[
+ {
+  "id": "d_dawn_01",
+  "slot": "dawn",
+  "text": "闹钟响的时候天刚亮，你在被窝里跟自己讨价还价了十分钟。",
+  "weight": 1.2,
+  "effects": {
+   "energy": -2
+  }
+ },
+ {
+  "id": "d_dawn_02",
+  "slot": "dawn",
+  "text": "你六点就自然醒了，窗外还很安静，你躺着听了一会儿早班公交的声音。",
+  "weight": 0.8,
+  "trait_bias": {
+   "C": 0.5
+  },
+  "effects": {
+   "mood": 3
+  }
+ },
+ {
+  "id": "d_dawn_03",
+  "slot": "dawn",
+  "text": "早饭是昨晚剩的半个面包和一杯热水，站在厨房三分钟解决。",
+  "weight": 1.0,
+  "requires": {
+   "rest_day": false
+  }
+ },
+ {
+  "id": "d_dawn_04",
+  "slot": "dawn",
+  "text": "你煎了个蛋，蛋黄没破，这让你觉得今天大概会顺利。",
+  "weight": 0.8,
+  "effects": {
+   "mood": 3
+  }
+ },
+ {
+  "id": "d_dawn_05",
+  "slot": "dawn",
+  "text": "出门时发现忘带钥匙，又折回去一趟，电梯等了很久。",
+  "weight": 0.7,
+  "effects": {
+   "mood": -3,
+   "stress": 3
+  }
+ },
+ {
+  "id": "d_dawn_06",
+  "slot": "dawn",
+  "text": "地铁挤得转不过身，你保持着一个别扭的姿势站了四十分钟。",
+  "weight": 1.0,
+  "requires": {
+   "rest_day": false
+  },
+  "effects": {
+   "energy": -6
+  }
+ },
+ {
+  "id": "d_dawn_07",
+  "slot": "dawn",
+  "text": "路口的早点摊排了长队，你还是排了，热豆浆握在手里那一刻觉得值。",
+  "weight": 0.8,
+  "effects": {
+   "mood": 4
+  }
+ },
+ {
+  "id": "d_dawn_08",
+  "slot": "dawn",
+  "text": "外面下着雨，你在门口站了半分钟，还是回屋拿了伞。",
+  "weight": 0.9,
+  "requires": {
+   "weather": "雨"
+  }
+ },
+ {
+  "id": "d_dawn_09",
+  "slot": "dawn",
+  "text": "冷空气一下子灌进领口，你把脖子缩进围巾里，走得飞快。",
+  "weight": 0.9,
+  "requires": {
+   "season": "冬"
+  }
+ },
+ {
+  "id": "d_dawn_10",
+  "slot": "dawn",
+  "text": "楼下的樱花开了一半，你站在树下看了一会儿，拍了张照。",
+  "weight": 0.7,
+  "requires": {
+   "season": "春"
+  },
+  "effects": {
+   "mood": 3
+  }
+ },
+ {
+  "id": "d_dawn_11",
+  "slot": "dawn",
+  "text": "你睡到自然醒，看了眼时间，又心安理得地翻了个身。",
+  "weight": 1.2,
+  "requires": {
+   "rest_day": true
+  },
+  "effects": {
+   "energy": 5,
+   "mood": 4
+  }
+ },
+ {
+  "id": "d_dawn_12",
+  "slot": "dawn",
+  "text": "醒来第一件事是摸手机，刷了二十分钟才想起来该起床了。",
+  "weight": 1.0,
+  "trait_bias": {
+   "C": -0.4
+  },
+  "effects": {
+   "energy": -3
+  }
+ },
+ {
+  "id": "d_dawn_13",
+  "slot": "dawn",
+  "text": "你实在起不来，请了半天假，然后又睡了回去。",
+  "weight": 0.4,
+  "requires": {
+   "energy_below": 30
+  },
+  "effects": {
+   "energy": 12,
+   "mood": -2
+  }
+ },
+ {
+  "id": "d_dawn_14",
+  "slot": "dawn",
+  "text": "出门前照镜子，发现自己黑眼圈重得像没睡。事实上确实没睡好。",
+  "weight": 0.7,
+  "requires": {
+   "energy_below": 45
+  }
+ },
+ {
+  "id": "d_dawn_15",
+  "slot": "dawn",
+  "text": "你早起去跑了两公里，回来出了一身汗，整个人都是热的。",
+  "weight": 0.6,
+  "trait_bias": {
+   "C": 0.5
+  },
+  "effects": {
+   "energy": -5,
+   "health": 3,
+   "mood": 5
+  }
+ },
+ {
+  "id": "d_morn_01",
+  "slot": "morning",
+  "text": "上午的会开了一个半小时，结论是「下次再议」。",
+  "weight": 1.1,
+  "requires": {
+   "employed": true,
+   "rest_day": false
+  },
+  "effects": {
+   "energy": -6,
+   "stress": 3
+  }
+ },
+ {
+  "id": "d_morn_02",
+  "slot": "morning",
+  "text": "{colleague}过来问你一个问题，你顺手帮他改了，花了二十分钟。",
+  "weight": 1.0,
+  "requires": {
+   "employed": true,
+   "rest_day": false
+  },
+  "trait_bias": {
+   "A": 0.4
+  }
+ },
+ {
+  "id": "d_morn_03",
+  "slot": "morning",
+  "text": "你把待办清单重新排了一遍，排完发现最难的那件还在最上面。",
+  "weight": 0.9,
+  "trait_bias": {
+   "C": 0.4
+  },
+  "effects": {
+   "stress": 2
+  },
+  "requires": {
+   "rest_day": false
+  }
+ },
+ {
+  "id": "d_morn_04",
+  "slot": "morning",
+  "text": "邮件堆了三十多封，你从最新的往回处理，处理到一半就想放弃。",
+  "weight": 0.9,
+  "requires": {
+   "employed": true,
+   "rest_day": false
+  },
+  "effects": {
+   "energy": -5
+  }
+ },
+ {
+  "id": "d_morn_05",
+  "slot": "morning",
+  "text": "你进入了难得的心流，抬头时已经十一点半，一上午过得飞快。",
+  "weight": 0.7,
+  "requires": {
+   "energy_above": 55
+  },
+  "effects": {
+   "mood": 6,
+   "energy": -5
+  }
+ },
+ {
+  "id": "d_morn_06",
+  "slot": "morning",
+  "text": "工位上的绿植又蔫了，你给它浇了点水，心想它比你能撑。",
+  "weight": 0.7,
+  "requires": {
+   "employed": true
+  }
+ },
+ {
+  "id": "d_morn_07",
+  "slot": "morning",
+  "text": "{colleague}拉你去楼下便利店买咖啡，路上聊了些没营养的八卦。",
+  "weight": 0.9,
+  "requires": {
+   "employed": true,
+   "rest_day": false
+  },
+  "trait_bias": {
+   "E": 0.4
+  },
+  "effects": {
+   "mood": 3
+  }
+ },
+ {
+  "id": "d_morn_08",
+  "slot": "morning",
+  "text": "你在上课，讲台上的内容你听懂了七成，剩下三成打算课后再说。",
+  "weight": 1.0,
+  "requires": {
+   "employed": false,
+   "rest_day": false
+  }
+ },
+ {
+  "id": "d_morn_09",
+  "slot": "morning",
+  "text": "图书馆的位置被占了，你换了三个地方才坐下。",
+  "weight": 0.8,
+  "requires": {
+   "employed": false
+  }
+ },
+ {
+  "id": "d_morn_10",
+  "slot": "morning",
+  "text": "你把攒了一周的衣服洗了，晾满了整个阳台。",
+  "weight": 1.0,
+  "requires": {
+   "rest_day": true
+  },
+  "effects": {
+   "energy": -5,
+   "mood": 3
+  }
+ },
+ {
+  "id": "d_morn_11",
+  "slot": "morning",
+  "text": "你慢悠悠地做了顿早午饭，边做边放着不知道第几遍的老剧。",
+  "weight": 1.0,
+  "requires": {
+   "rest_day": true
+  },
+  "effects": {
+   "mood": 5
+  }
+ },
+ {
+  "id": "d_morn_12",
+  "slot": "morning",
+  "text": "群里在讨论周末的安排，你看了半天，最后回了个表情包。",
+  "weight": 0.8,
+  "trait_bias": {
+   "E": -0.3
+  }
+ },
+ {
+  "id": "d_morn_13",
+  "slot": "morning",
+  "text": "你把一件拖了很久的小事做完了，比想象中简单，也比想象中轻松。",
+  "weight": 0.8,
+  "effects": {
+   "stress": -6,
+   "mood": 5
+  }
+ },
+ {
+  "id": "d_morn_14",
+  "slot": "morning",
+  "text": "领导在群里 @ 了所有人，你盯着那条消息看了三遍才确定不是找你。",
+  "weight": 0.7,
+  "requires": {
+   "employed": true,
+   "rest_day": false
+  },
+  "trait_bias": {
+   "N": 0.4
+  },
+  "effects": {
+   "stress": 4
+  }
+ },
+ {
+  "id": "d_morn_15",
+  "slot": "morning",
+  "text": "你在纸上写写画画，理清了一个困扰了好几天的思路。",
+  "weight": 0.7,
+  "trait_bias": {
+   "O": 0.4
+  },
+  "effects": {
+   "mood": 5,
+   "stress": -4
+  }
+ },
+ {
+  "id": "d_noon_01",
+  "slot": "noon",
+  "text": "午饭点了常吃的那家，二十分钟送到，味道和上次一模一样。",
+  "weight": 1.1
+ },
+ {
+  "id": "d_noon_02",
+  "slot": "noon",
+  "text": "和{colleague}拼了个饭，聊到一半话题转到了房价，谁都没接下去。",
+  "weight": 1.0,
+  "requires": {
+   "employed": true,
+   "rest_day": false
+  }
+ },
+ {
+  "id": "d_noon_03",
+  "slot": "noon",
+  "text": "你趴在桌上眯了二十分钟，醒来手臂麻了半边。",
+  "weight": 1.0,
+  "requires": {
+   "rest_day": false
+  },
+  "effects": {
+   "energy": 8
+  }
+ },
+ {
+  "id": "d_noon_04",
+  "slot": "noon",
+  "text": "食堂今天的菜出乎意料地好，你还添了半勺。",
+  "weight": 0.8,
+  "effects": {
+   "mood": 4
+  }
+ },
+ {
+  "id": "d_noon_05",
+  "slot": "noon",
+  "text": "你一个人在楼下走了两圈，晒了会儿太阳才上楼。",
+  "weight": 0.9,
+  "trait_bias": {
+   "E": -0.3
+  },
+  "effects": {
+   "mood": 4,
+   "energy": 3
+  }
+ },
+ {
+  "id": "d_noon_06",
+  "slot": "noon",
+  "text": "忙到忘了吃饭，等想起来的时候已经过了两点，随便对付了几口。",
+  "weight": 0.7,
+  "requires": {
+   "rest_day": false,
+   "stress_above": 55
+  },
+  "effects": {
+   "health": -2,
+   "energy": -4
+  }
+ },
+ {
+  "id": "d_noon_07",
+  "slot": "noon",
+  "text": "你翻了会儿手机，看到一条几年前关注的博主更新了，恍如隔世。",
+  "weight": 0.7
+ },
+ {
+  "id": "d_noon_08",
+  "slot": "noon",
+  "text": "中午和{friend}通了个电话，聊了近况，挂掉后心情好了不少。",
+  "weight": 0.7,
+  "trait_bias": {
+   "E": 0.4
+  },
+  "effects": {
+   "mood": 6
+  }
+ },
+ {
+  "id": "d_noon_09",
+  "slot": "noon",
+  "text": "你在便利店买了个饭团，站在窗边吃完了。窗外人来人往。",
+  "weight": 0.8
+ },
+ {
+  "id": "d_noon_10",
+  "slot": "noon",
+  "text": "和{partner}一起吃了午饭，聊的都是琐事，但吃得很舒服。",
+  "weight": 0.9,
+  "requires": {
+   "partnered": true,
+   "rest_day": true
+  },
+  "effects": {
+   "mood": 6
+  }
+ },
+ {
+  "id": "d_aft_01",
+  "slot": "afternoon",
+  "text": "下午三点是一天里最难熬的时候，你灌了杯咖啡续命。",
+  "weight": 1.1,
+  "requires": {
+   "rest_day": false
+  },
+  "effects": {
+   "energy": 6
+  }
+ },
+ {
+  "id": "d_aft_02",
+  "slot": "afternoon",
+  "text": "一个临时需求插进来，把你原本的安排全打乱了。",
+  "weight": 1.0,
+  "requires": {
+   "employed": true,
+   "rest_day": false
+  },
+  "effects": {
+   "stress": 8,
+   "mood": -4
+  }
+ },
+ {
+  "id": "d_aft_03",
+  "slot": "afternoon",
+  "text": "你摸鱼看了二十分钟视频，看完有点心虚，又有点满足。",
+  "weight": 1.0,
+  "trait_bias": {
+   "C": -0.4
+  },
+  "effects": {
+   "mood": 3
+  },
+  "requires": {
+   "rest_day": false
+  }
+ },
+ {
+  "id": "d_aft_04",
+  "slot": "afternoon",
+  "text": "你和{colleague}为一个方案争了几句，最后各退一步。",
+  "weight": 0.8,
+  "requires": {
+   "employed": true,
+   "rest_day": false
+  },
+  "trait_bias": {
+   "A": -0.3
+  },
+  "effects": {
+   "stress": 4
+  }
+ },
+ {
+  "id": "d_aft_05",
+  "slot": "afternoon",
+  "text": "你把一件棘手的事情推进了一大截，虽然还没做完，但心里有底了。",
+  "weight": 0.9,
+  "requires": {
+   "energy_above": 45
+  },
+  "effects": {
+   "mood": 6,
+   "stress": -5
+  }
+ },
+ {
+  "id": "d_aft_06",
+  "slot": "afternoon",
+  "text": "窗外突然下起雨来，办公室里有人喊了一声「收衣服」，然后又都笑了。",
+  "weight": 0.7,
+  "requires": {
+   "weather": "雨"
+  },
+  "effects": {
+   "mood": 3
+  }
+ },
+ {
+  "id": "d_aft_07",
+  "slot": "afternoon",
+  "text": "你去银行/政务大厅办了件事，排队一小时，办理三分钟。",
+  "weight": 0.6,
+  "requires": {
+   "rest_day": true
+  },
+  "effects": {
+   "energy": -8,
+   "stress": 4
+  }
+ },
+ {
+  "id": "d_aft_08",
+  "slot": "afternoon",
+  "text": "你出门逛了逛，没买什么，就是想在外面待着。",
+  "weight": 0.9,
+  "requires": {
+   "rest_day": true
+  },
+  "effects": {
+   "mood": 5
+  }
+ },
+ {
+  "id": "d_aft_09",
+  "slot": "afternoon",
+  "text": "你去理了个发，剪完照镜子的时候努力说服自己「过几天就好了」。",
+  "weight": 0.5,
+  "requires": {
+   "rest_day": true
+  },
+  "effects": {
+   "mood": -2
+  }
+ },
+ {
+  "id": "d_aft_10",
+  "slot": "afternoon",
+  "text": "你窝在沙发上看完了一整部电影，中途睡着了十分钟。",
+  "weight": 0.9,
+  "requires": {
+   "rest_day": true
+  },
+  "effects": {
+   "energy": 5,
+   "mood": 5
+  }
+ },
+ {
+  "id": "d_aft_11",
+  "slot": "afternoon",
+  "text": "困得撑不住，你在工位上偷偷打了个盹，被吓醒时以为过了很久，其实才五分钟。",
+  "weight": 0.8,
+  "requires": {
+   "energy_below": 40,
+   "rest_day": false
+  }
+ },
+ {
+  "id": "d_aft_12",
+  "slot": "afternoon",
+  "text": "你收到一条好消息，虽然和你关系不大，但还是跟着高兴了一下。",
+  "weight": 0.6,
+  "effects": {
+   "mood": 5
+  }
+ },
+ {
+  "id": "d_aft_13",
+  "slot": "afternoon",
+  "text": "你陪家里人去了趟超市，推着车在货架间转了很久。",
+  "weight": 0.7,
+  "requires": {
+   "rest_day": true
+  },
+  "effects": {
+   "money": -3,
+   "mood": 3
+  }
+ },
+ {
+  "id": "d_aft_14",
+  "slot": "afternoon",
+  "text": "你在阳台上把花草挨个浇了一遍，顺手擦了擦叶子。",
+  "weight": 0.7,
+  "requires": {
+   "rest_day": true
+  },
+  "effects": {
+   "mood": 4,
+   "stress": -3
+  }
+ },
+ {
+  "id": "d_aft_15",
+  "slot": "afternoon",
+  "text": "你翻出一堆旧东西准备扔，结果每样都拿起来看半天，最后什么也没扔。",
+  "weight": 0.6,
+  "requires": {
+   "rest_day": true
+  },
+  "trait_bias": {
+   "O": 0.3
+  }
+ },
+ {
+  "id": "d_eve_01",
+  "slot": "evening",
+  "text": "下班路上天已经黑了，路灯一盏盏亮着，你没戴耳机，听了一路车流。",
+  "weight": 1.0,
+  "requires": {
+   "rest_day": false
+  }
+ },
+ {
+  "id": "d_eve_02",
+  "slot": "evening",
+  "text": "你去菜市场买了点菜，摊主多送了你两根葱。",
+  "weight": 0.9,
+  "effects": {
+   "mood": 4,
+   "money": -2
+  }
+ },
+ {
+  "id": "d_eve_03",
+  "slot": "evening",
+  "text": "晚饭做多了，你吃到撑，剩下的装进保鲜盒当明天的午饭。",
+  "weight": 0.9,
+  "effects": {
+   "mood": 3
+  }
+ },
+ {
+  "id": "d_eve_04",
+  "slot": "evening",
+  "text": "你和{friend}约了顿饭，聊到店里快打烊，出门时凉风一吹，人特别清醒。",
+  "weight": 0.8,
+  "trait_bias": {
+   "E": 0.5
+  },
+  "effects": {
+   "mood": 8,
+   "energy": -6,
+   "money": -4
+  }
+ },
+ {
+  "id": "d_eve_05",
+  "slot": "evening",
+  "text": "你出去走了半小时，绕着小区转了三圈，什么也没想。",
+  "weight": 0.9,
+  "effects": {
+   "health": 2,
+   "stress": -5,
+   "mood": 3
+  }
+ },
+ {
+  "id": "d_eve_06",
+  "slot": "evening",
+  "text": "晚上又留下来加班，等你走的时候整层楼只剩你和保洁阿姨。",
+  "weight": 0.7,
+  "requires": {
+   "employed": true,
+   "rest_day": false
+  },
+  "effects": {
+   "energy": -12,
+   "stress": 8,
+   "mood": -4
+  }
+ },
+ {
+  "id": "d_eve_07",
+  "slot": "evening",
+  "text": "和{partner}一起收拾了屋子，边收拾边斗嘴，最后谁也没赢。",
+  "weight": 0.9,
+  "requires": {
+   "partnered": true
+  },
+  "effects": {
+   "mood": 6
+  }
+ },
+ {
+  "id": "d_eve_08",
+  "slot": "evening",
+  "text": "你给家里打了个电话，聊了二十分钟，大部分时间在听。",
+  "weight": 0.8,
+  "effects": {
+   "mood": 5
+  }
+ },
+ {
+  "id": "d_eve_09",
+  "slot": "evening",
+  "text": "你点了顿好的犒劳自己，吃完摸着肚子觉得这钱花得值。",
+  "weight": 0.8,
+  "effects": {
+   "mood": 6,
+   "money": -4
+  }
+ },
+ {
+  "id": "d_eve_10",
+  "slot": "evening",
+  "text": "楼下的猫又来蹭你的裤脚，你蹲下摸了两把，它就跑了。",
+  "weight": 0.7,
+  "effects": {
+   "mood": 4
+  }
+ },
+ {
+  "id": "d_eve_11",
+  "slot": "evening",
+  "text": "你去健身房练了一小时，出来的时候腿有点软，但心情很好。",
+  "weight": 0.7,
+  "trait_bias": {
+   "C": 0.4
+  },
+  "effects": {
+   "health": 4,
+   "mood": 6,
+   "energy": -8
+  }
+ },
+ {
+  "id": "d_eve_12",
+  "slot": "evening",
+  "text": "你什么也没干，就靠在沙发上刷手机，一晃就到了十点。",
+  "weight": 1.0,
+  "requires": {
+   "energy_below": 45
+  },
+  "effects": {
+   "mood": -2
+  }
+ },
+ {
+  "id": "d_eve_13",
+  "slot": "evening",
+  "text": "你把冰箱清了一遍，扔掉两样过期的东西，心里莫名清爽。",
+  "weight": 0.6,
+  "trait_bias": {
+   "C": 0.3
+  },
+  "effects": {
+   "mood": 4
+  }
+ },
+ {
+  "id": "d_eve_14",
+  "slot": "evening",
+  "text": "你和{neighbor}在电梯里聊了两句天气，短短几句，但感觉不错。",
+  "weight": 0.6,
+  "trait_bias": {
+   "A": 0.3
+  },
+  "effects": {
+   "mood": 3
+  }
+ },
+ {
+  "id": "d_eve_15",
+  "slot": "evening",
+  "text": "你翻着外卖软件划了十分钟，最后还是点了那家常吃的。",
+  "weight": 0.9,
+  "effects": {
+   "money": -3
+  }
+ },
+ {
+  "id": "d_night_01",
+  "slot": "night",
+  "text": "洗完澡躺在床上，你觉得这是一天里最舒服的十分钟。",
+  "weight": 1.1,
+  "effects": {
+   "mood": 4,
+   "stress": -4
+  }
+ },
+ {
+  "id": "d_night_02",
+  "slot": "night",
+  "text": "你说好只看一集，结果看到了凌晨一点。",
+  "weight": 1.0,
+  "trait_bias": {
+   "C": -0.4
+  },
+  "effects": {
+   "energy": -8,
+   "mood": 3
+  }
+ },
+ {
+  "id": "d_night_03",
+  "slot": "night",
+  "text": "躺下之后翻来覆去，脑子里放电影一样过着白天的事。",
+  "weight": 0.9,
+  "trait_bias": {
+   "N": 0.5
+  },
+  "effects": {
+   "energy": -6,
+   "mood": -4
+  }
+ },
+ {
+  "id": "d_night_04",
+  "slot": "night",
+  "text": "你看了几页书，看到第三页就开始走神，索性关灯睡了。",
+  "weight": 0.9,
+  "trait_bias": {
+   "O": 0.3
+  }
+ },
+ {
+  "id": "d_night_05",
+  "slot": "night",
+  "text": "你在备忘录里写了几句话，写完自己看了一遍，删掉了一半。",
+  "weight": 0.7,
+  "trait_bias": {
+   "N": 0.3,
+   "O": 0.3
+  }
+ },
+ {
+  "id": "d_night_06",
+  "slot": "night",
+  "text": "你和{friend}的消息聊到很晚，聊的都是些不着边际的事。",
+  "weight": 0.7,
+  "trait_bias": {
+   "E": 0.4
+  },
+  "effects": {
+   "mood": 6,
+   "energy": -6
+  }
+ },
+ {
+  "id": "d_night_07",
+  "slot": "night",
+  "text": "你算了算这个月的开销，算完默默把想买的东西从购物车里删了。",
+  "weight": 0.7,
+  "effects": {
+   "stress": 3
+  }
+ },
+ {
+  "id": "d_night_08",
+  "slot": "night",
+  "text": "睡前你定了六个闹钟，隐约知道自己一个也不会听。",
+  "weight": 0.8,
+  "trait_bias": {
+   "C": -0.3
+  }
+ },
+ {
+  "id": "d_night_09",
+  "slot": "night",
+  "text": "窗外有人在放烟花，你趴在窗台上看完了，才想起来该睡了。",
+  "weight": 0.5,
+  "effects": {
+   "mood": 5
+  }
+ },
+ {
+  "id": "d_night_10",
+  "slot": "night",
+  "text": "你和{partner}靠在一起看了会儿电视，谁也没说话，很安稳。",
+  "weight": 0.9,
+  "requires": {
+   "partnered": true
+  },
+  "effects": {
+   "mood": 7,
+   "stress": -5
+  }
+ },
+ {
+  "id": "d_night_11",
+  "slot": "night",
+  "text": "你戴上耳机听了几首老歌，其中一首让你想起了很久以前的事。",
+  "weight": 0.8,
+  "effects": {
+   "mood": 2
+  }
+ },
+ {
+  "id": "d_night_12",
+  "slot": "night",
+  "text": "洗漱完你在镜子前站了会儿，觉得自己好像比上个月憔悴了些。",
+  "weight": 0.6,
+  "requires": {
+   "energy_below": 40
+  },
+  "trait_bias": {
+   "N": 0.4
+  },
+  "effects": {
+   "mood": -4
+  }
+ },
+ {
+  "id": "d_night_13",
+  "slot": "night",
+  "text": "你难得早早躺下，十一点前就睡着了，睡前还挺为自己骄傲。",
+  "weight": 0.7,
+  "trait_bias": {
+   "C": 0.4
+  },
+  "effects": {
+   "energy": 8,
+   "mood": 4
+  }
+ },
+ {
+  "id": "d_night_14",
+  "slot": "night",
+  "text": "你把明天要做的事列了个清单，列完心里踏实了些。",
+  "weight": 0.8,
+  "trait_bias": {
+   "C": 0.5
+  },
+  "effects": {
+   "stress": -5
+  }
+ },
+ {
+  "id": "d_night_15",
+  "slot": "night",
+  "text": "夜里醒了一次，看了眼手机才三点，又硬撑着睡了回去。",
+  "weight": 0.6,
+  "requires": {
+   "stress_above": 55
+  },
+  "effects": {
+   "energy": -5
+  }
+ },
+ {
+  "id": "d_night_16",
+  "slot": "night",
+  "text": "你刷到一条陌生人的动态，讲的是和你差不多的处境，看完沉默了一会儿。",
+  "weight": 0.6,
+  "trait_bias": {
+   "N": 0.3
+  }
+ },
+ {
+  "id": "d_night_17",
+  "slot": "night",
+  "text": "临睡前你把手机扔到床的另一头，逼自己不要再看。",
+  "weight": 0.6,
+  "trait_bias": {
+   "C": 0.3
+  },
+  "effects": {
+   "energy": 4
+  }
+ },
+ {
+  "id": "d_dawn_16",
+  "slot": "dawn",
+  "text": "你比闹钟早醒了十分钟，躺着等它响，那十分钟格外漫长。",
+  "weight": 0.8
+ },
+ {
+  "id": "d_dawn_17",
+  "slot": "dawn",
+  "text": "电梯里遇到同层的人，你们对视一秒，各自低头看手机。",
+  "weight": 0.9
+ },
+ {
+  "id": "d_dawn_18",
+  "slot": "dawn",
+  "text": "你把昨晚洗好的衣服收进来，还带着点太阳味。",
+  "weight": 0.7,
+  "effects": {
+   "mood": 3
+  }
+ },
+ {
+  "id": "d_dawn_19",
+  "slot": "dawn",
+  "text": "公交上你抢到了靠窗的位置，一路看着街景发呆。",
+  "weight": 0.9,
+  "requires": {
+   "rest_day": false
+  }
+ },
+ {
+  "id": "d_dawn_20",
+  "slot": "dawn",
+  "text": "你出门时被门槛绊了一下，没摔，但心里咯噔一声。",
+  "weight": 0.6
+ },
+ {
+  "id": "d_dawn_21",
+  "slot": "dawn",
+  "text": "起床后你先拉开窗帘，光一下涌进来，人也跟着醒了。",
+  "weight": 0.9,
+  "effects": {
+   "mood": 3
+  }
+ },
+ {
+  "id": "d_dawn_22",
+  "slot": "dawn",
+  "text": "你把牙刷了两遍，因为第一遍走神了完全没印象。",
+  "weight": 0.6
+ },
+ {
+  "id": "d_dawn_23",
+  "slot": "dawn",
+  "text": "外卖早餐迟到了二十分钟，你饿着肚子出了门。",
+  "weight": 0.7,
+  "effects": {
+   "mood": -3
+  }
+ },
+ {
+  "id": "d_dawn_24",
+  "slot": "dawn",
+  "text": "你在楼下看见环卫工人在扫落叶，扫得很慢，很认真。",
+  "weight": 0.6,
+  "requires": {
+   "season": "秋"
+  },
+  "effects": {
+   "mood": 2
+  }
+ },
+ {
+  "id": "d_dawn_25",
+  "slot": "dawn",
+  "text": "天太热了，你出门五分钟就后背发潮，只好又回去换了件衣服。",
+  "weight": 0.7,
+  "requires": {
+   "season": "夏"
+  },
+  "effects": {
+   "mood": -2
+  }
+ },
+ {
+  "id": "d_morn_16",
+  "slot": "morning",
+  "text": "你花了一上午写一份没人会认真看的文档。",
+  "weight": 0.9,
+  "requires": {
+   "employed": true,
+   "rest_day": false
+  },
+  "effects": {
+   "mood": -3
+  }
+ },
+ {
+  "id": "d_morn_17",
+  "slot": "morning",
+  "text": "打印机又卡纸了，你和{colleague}一起蹲在地上研究了十分钟。",
+  "weight": 0.7,
+  "requires": {
+   "employed": true,
+   "rest_day": false
+  },
+  "effects": {
+   "mood": 3
+  }
+ },
+ {
+  "id": "d_morn_18",
+  "slot": "morning",
+  "text": "你被拉进了一个新群，进去发现自己是唯一一个不知道要干嘛的人。",
+  "weight": 0.7,
+  "requires": {
+   "rest_day": false
+  },
+  "effects": {
+   "stress": 3
+  }
+ },
+ {
+  "id": "d_morn_19",
+  "slot": "morning",
+  "text": "你趁上午没人打扰，把积压的活儿清掉了一半。",
+  "weight": 0.9,
+  "requires": {
+   "energy_above": 50
+  },
+  "effects": {
+   "stress": -6,
+   "mood": 5
+  }
+ },
+ {
+  "id": "d_morn_20",
+  "slot": "morning",
+  "text": "你在窗边站了会儿，看楼下的人流从稀到密。",
+  "weight": 0.7,
+  "effects": {
+   "mood": 2
+  }
+ },
+ {
+  "id": "d_morn_21",
+  "slot": "morning",
+  "text": "你收到一个快递，拆开发现是自己上个月下单早忘了的东西。",
+  "weight": 0.7,
+  "effects": {
+   "mood": 4
+  }
+ },
+ {
+  "id": "d_morn_22",
+  "slot": "morning",
+  "text": "你把桌面整理干净，键盘缝里的灰也擦了，然后才开始干活。",
+  "weight": 0.7,
+  "trait_bias": {
+   "C": 0.4
+  },
+  "effects": {
+   "mood": 3
+  }
+ },
+ {
+  "id": "d_morn_23",
+  "slot": "morning",
+  "text": "你听着播客做事，听完发现内容一点没记住，但活干完了。",
+  "weight": 0.8
+ },
+ {
+  "id": "d_morn_24",
+  "slot": "morning",
+  "text": "你在做题/看资料，看到一半开始怀疑自己适不适合这个方向。",
+  "weight": 0.7,
+  "requires": {
+   "employed": false
+  },
+  "trait_bias": {
+   "N": 0.4
+  },
+  "effects": {
+   "mood": -4
+  }
+ },
+ {
+  "id": "d_morn_25",
+  "slot": "morning",
+  "text": "你把窗户全打开，让风穿堂而过，屋子一下就精神了。",
+  "weight": 0.8,
+  "requires": {
+   "rest_day": true
+  },
+  "effects": {
+   "mood": 4
+  }
+ },
+ {
+  "id": "d_noon_11",
+  "slot": "noon",
+  "text": "你和{colleague}排队打饭，队伍很长，你们聊完了整整两个话题。",
+  "weight": 0.8,
+  "requires": {
+   "employed": true,
+   "rest_day": false
+  }
+ },
+ {
+  "id": "d_noon_12",
+  "slot": "noon",
+  "text": "你尝了家新开的店，味道一般，但环境不错，够了。",
+  "weight": 0.8,
+  "effects": {
+   "money": -3
+  }
+ },
+ {
+  "id": "d_noon_13",
+  "slot": "noon",
+  "text": "你中午回了趟家取东西，屋里安静得有点陌生。",
+  "weight": 0.5
+ },
+ {
+  "id": "d_noon_14",
+  "slot": "noon",
+  "text": "你边吃边看剧，一集刚好一顿饭的长度，掐得刚刚好。",
+  "weight": 0.9
+ },
+ {
+  "id": "d_noon_15",
+  "slot": "noon",
+  "text": "食堂排到你的时候，你想吃的那道菜刚好卖完了。",
+  "weight": 0.7,
+  "effects": {
+   "mood": -3
+  }
+ },
+ {
+  "id": "d_noon_16",
+  "slot": "noon",
+  "text": "你在午休时把一直想问的事发了出去，然后一直在等回复。",
+  "weight": 0.6,
+  "trait_bias": {
+   "N": 0.3
+  },
+  "effects": {
+   "stress": 4
+  }
+ },
+ {
+  "id": "d_noon_17",
+  "slot": "noon",
+  "text": "你和{friend}约了午饭，见面第一句是「你怎么瘦了」，第二句是「真的假的」。",
+  "weight": 0.6,
+  "trait_bias": {
+   "E": 0.4
+  },
+  "effects": {
+   "mood": 6
+  }
+ },
+ {
+  "id": "d_noon_18",
+  "slot": "noon",
+  "text": "你午睡做了个乱七八糟的梦，醒来花了半分钟才想起自己在哪。",
+  "weight": 0.7,
+  "requires": {
+   "rest_day": false
+  }
+ },
+ {
+  "id": "d_aft_16",
+  "slot": "afternoon",
+  "text": "你把一个做了很久的东西删掉重来，删的时候居然很轻松。",
+  "weight": 0.6,
+  "trait_bias": {
+   "O": 0.3
+  },
+  "effects": {
+   "stress": 3
+  }
+ },
+ {
+  "id": "d_aft_17",
+  "slot": "afternoon",
+  "text": "下午茶时间{colleague}带了点心回来，办公室气氛短暂地好了半小时。",
+  "weight": 0.8,
+  "requires": {
+   "employed": true,
+   "rest_day": false
+  },
+  "effects": {
+   "mood": 5
+  }
+ },
+ {
+  "id": "d_aft_18",
+  "slot": "afternoon",
+  "text": "你接了个说是「五分钟」的电话，打了四十分钟。",
+  "weight": 0.8,
+  "requires": {
+   "rest_day": false
+  },
+  "effects": {
+   "energy": -6,
+   "stress": 4
+  }
+ },
+ {
+  "id": "d_aft_19",
+  "slot": "afternoon",
+  "text": "你去了趟医院/诊所，排队时观察了半天来来往往的人。",
+  "weight": 0.4,
+  "effects": {
+   "energy": -8,
+   "money": -4
+  }
+ },
+ {
+  "id": "d_aft_20",
+  "slot": "afternoon",
+  "text": "你在咖啡馆坐了一下午，事没干多少，但状态很松弛。",
+  "weight": 0.8,
+  "requires": {
+   "rest_day": true
+  },
+  "effects": {
+   "mood": 5,
+   "stress": -5,
+   "money": -3
+  }
+ },
+ {
+  "id": "d_aft_21",
+  "slot": "afternoon",
+  "text": "你把家里彻底打扫了一遍，扫完累得瘫在地上，看着干净的屋子傻笑。",
+  "weight": 0.8,
+  "requires": {
+   "rest_day": true
+  },
+  "trait_bias": {
+   "C": 0.3
+  },
+  "effects": {
+   "energy": -12,
+   "mood": 7
+  }
+ },
+ {
+  "id": "d_aft_22",
+  "slot": "afternoon",
+  "text": "你和人在网上因为一件小事争了几句，争完觉得没意义，关掉了。",
+  "weight": 0.6,
+  "trait_bias": {
+   "A": -0.3
+  },
+  "effects": {
+   "mood": -4
+  }
+ },
+ {
+  "id": "d_aft_23",
+  "slot": "afternoon",
+  "text": "你午后睡了一觉，醒来天都快黑了，有种荒废又满足的感觉。",
+  "weight": 0.8,
+  "requires": {
+   "rest_day": true
+  },
+  "effects": {
+   "energy": 10,
+   "mood": 2
+  }
+ },
+ {
+  "id": "d_aft_24",
+  "slot": "afternoon",
+  "text": "你查了半天攻略，最后哪也没去，就在家附近转了转。",
+  "weight": 0.7,
+  "requires": {
+   "rest_day": true
+  }
+ },
+ {
+  "id": "d_aft_25",
+  "slot": "afternoon",
+  "text": "你被一个小问题卡了两个小时，最后发现是个特别蠢的原因。",
+  "weight": 0.8,
+  "requires": {
+   "rest_day": false
+  },
+  "effects": {
+   "stress": 6,
+   "mood": -3
+  }
+ },
+ {
+  "id": "d_eve_16",
+  "slot": "evening",
+  "text": "你在回家路上买了个水果，回家洗了半天，吃的时候觉得特别甜。",
+  "weight": 0.8,
+  "effects": {
+   "mood": 4,
+   "money": -2
+  }
+ },
+ {
+  "id": "d_eve_17",
+  "slot": "evening",
+  "text": "你路过公园，看见有人在跳广场舞，站着看了一会儿。",
+  "weight": 0.7,
+  "effects": {
+   "mood": 3
+  }
+ },
+ {
+  "id": "d_eve_18",
+  "slot": "evening",
+  "text": "电梯坏了，你爬楼梯上去，爬到一半开始怀疑自己的体力。",
+  "weight": 0.6,
+  "effects": {
+   "energy": -6
+  }
+ },
+ {
+  "id": "d_eve_19",
+  "slot": "evening",
+  "text": "你和{partner}为晚上吃什么讨论了二十分钟，最后还是吃了老三样。",
+  "weight": 0.8,
+  "requires": {
+   "partnered": true
+  },
+  "effects": {
+   "mood": 4
+  }
+ },
+ {
+  "id": "d_eve_20",
+  "slot": "evening",
+  "text": "你临时被叫去帮忙，晚饭拖到了九点才吃上。",
+  "weight": 0.6,
+  "requires": {
+   "rest_day": false
+  },
+  "effects": {
+   "energy": -8,
+   "mood": -3
+  }
+ },
+ {
+  "id": "d_eve_21",
+  "slot": "evening",
+  "text": "你把窗帘拉开看了会儿晚霞，颜色好得像假的。",
+  "weight": 0.7,
+  "effects": {
+   "mood": 5
+  }
+ },
+ {
+  "id": "d_eve_22",
+  "slot": "evening",
+  "text": "你做了顿正经的饭，摆盘拍了照，然后自己吃光了。",
+  "weight": 0.8,
+  "effects": {
+   "mood": 5
+  }
+ },
+ {
+  "id": "d_eve_23",
+  "slot": "evening",
+  "text": "你去超市补货，推着车逛了一小时，买了一堆计划外的东西。",
+  "weight": 0.8,
+  "effects": {
+   "money": -5,
+   "mood": 3
+  }
+ },
+ {
+  "id": "d_eve_24",
+  "slot": "evening",
+  "text": "你和{friend}打了会儿游戏，输多赢少，但笑了一晚上。",
+  "weight": 0.7,
+  "trait_bias": {
+   "E": 0.3
+  },
+  "effects": {
+   "mood": 6,
+   "energy": -5
+  }
+ },
+ {
+  "id": "d_eve_25",
+  "slot": "evening",
+  "text": "你什么胃口都没有，随便煮了碗面，边吃边发呆。",
+  "weight": 0.7,
+  "requires": {
+   "mood_below": 45
+  },
+  "effects": {
+   "mood": -2
+  }
+ },
+ {
+  "id": "d_night_18",
+  "slot": "night",
+  "text": "你洗了个很久的热水澡，出来的时候浴室全是雾。",
+  "weight": 0.9,
+  "effects": {
+   "stress": -6,
+   "mood": 4
+  }
+ },
+ {
+  "id": "d_night_19",
+  "slot": "night",
+  "text": "你在床上刷到了三年前的照片，看着看着就一点睡意都没有了。",
+  "weight": 0.7,
+  "effects": {
+   "energy": -5
+  }
+ },
+ {
+  "id": "d_night_20",
+  "slot": "night",
+  "text": "你把明天的衣服提前搭好放在椅子上，这让你有种掌控感。",
+  "weight": 0.7,
+  "trait_bias": {
+   "C": 0.5
+  },
+  "effects": {
+   "stress": -4
+  }
+ },
+ {
+  "id": "d_night_21",
+  "slot": "night",
+  "text": "你听着窗外的雨声睡着了，睡得意外地沉。",
+  "weight": 0.8,
+  "requires": {
+   "weather": "雨"
+  },
+  "effects": {
+   "energy": 6,
+   "mood": 4
+  }
+ },
+ {
+  "id": "d_night_22",
+  "slot": "night",
+  "text": "你和家里视频了半小时，挂断后房间显得格外安静。",
+  "weight": 0.7,
+  "effects": {
+   "mood": 4
+  }
+ },
+ {
+  "id": "d_night_23",
+  "slot": "night",
+  "text": "你熬夜把一件拖了很久的事做完了，做完已经快两点。",
+  "weight": 0.6,
+  "effects": {
+   "stress": -8,
+   "energy": -12,
+   "mood": 5
+  }
+ },
+ {
+  "id": "d_night_24",
+  "slot": "night",
+  "text": "你躺下才想起来今天忘了一件重要的事，纠结要不要现在爬起来。",
+  "weight": 0.6,
+  "trait_bias": {
+   "N": 0.4
+  },
+  "effects": {
+   "stress": 6
+  }
+ },
+ {
+  "id": "d_night_25",
+  "slot": "night",
+  "text": "你做了个简单的拉伸，做完觉得身体没那么僵了。",
+  "weight": 0.7,
+  "trait_bias": {
+   "C": 0.3
+  },
+  "effects": {
+   "health": 2,
+   "stress": -3
+  }
+ },
+ {
+  "id": "d_night_26",
+  "slot": "night",
+  "text": "你翻着相册删照片，删着删着又把删掉的恢复了几张。",
+  "weight": 0.6
+ },
+ {
+  "id": "d_night_27",
+  "slot": "night",
+  "text": "你和{partner}聊了聊各自最近的烦心事，说完都轻松了些。",
+  "weight": 0.8,
+  "requires": {
+   "partnered": true
+  },
+  "effects": {
+   "mood": 6,
+   "stress": -6
+  }
+ },
+ {
+  "id": "d_night_28",
+  "slot": "night",
+  "text": "夜里下起了雨，你起来关窗，站着听了半分钟才回床上。",
+  "weight": 0.6,
+  "effects": {
+   "mood": 2
+  }
+ }
+]
