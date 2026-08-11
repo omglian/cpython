@@ -258,31 +258,35 @@ function century(yy, currentYear) {
   return c <= currentYear ? c : 1900 + yy;
 }
 
-const NUM = "(\\d{1,3}|[零〇一二两俩三仨四五六七八九十拾廿卅百]{1,4})";
+const NUM = "(\\d{1,3}|[零〇一二两俩三仨四五六七八九十拾廿卅卌百]{1,4})";
 const CN_YEAR = "([零〇○一二三四五六七八九]{2,4})";
 
-const OTHER_WORDS = "爸爸|爸|父亲|老爸|妈妈|妈|母亲|老妈|爷爷|奶奶|外公|外婆|姥姥|姥爷|" +
-  "哥哥|哥|姐姐|姐|弟弟|弟|妹妹|妹|儿子|女儿|孩子|娃|外甥|侄子|侄女|" +
-  "孙子|孙女|老婆|妻子|老公|丈夫|媳妇|爱人|对象|男朋友|女朋友|男友|女友|" +
-  "前任|前妻|前夫|叔叔|阿姨|舅舅|姑姑|姨|伯父|表哥|表姐|表弟|表妹|堂哥|" +
-  "同事|同学|朋友|哥们|闺蜜|室友|老师|学生|学员|徒弟|师傅|领导|老板|" +
-  "客户|甲方|病人|患者|邻居|房东|租客|保姆|司机|员工|下属|教练|他|她|他们|她们";
-const SUBJECT_RE = new RegExp("((?:我|我们|咱|咱们|俺)?(?:的)?(?:" + OTHER_WORDS + "))|((?:我|俺|本人)(?!们))", "g");
+const OTHER_WORDS = "爸爸|爸|爹|父亲|老爸|老爹|妈妈|妈|娘|母亲|老妈|老娘|爷爷|奶奶|外公|外婆|姥姥|姥爷|姥|爷|老爷子|老太太|老头|老伴|那口子|哥哥|哥|姐姐|姐|弟弟|弟|妹妹|妹|儿子|女儿|闺女|丫头|小子|崽|孩子|小孩|娃|宝宝|外甥|外甥女|侄子|侄女|侄儿|孙子|孙女|外孙|外孙女|老婆|妻子|老公|丈夫|媳妇|爱人|对象|男朋友|女朋友|男友|女友|前任|前妻|前夫|岳父|岳母|公公|婆婆|女婿|儿媳|嫂子|姐夫|妹夫|弟妹|叔叔|叔|阿姨|舅舅|舅|姑姑|姑|姨|伯父|大伯|伯母|舅妈|姑父|姨夫|表哥|表姐|表弟|表妹|堂哥|堂姐|堂弟|堂妹|小舅子|大姨子|同事|同学|朋友|哥们|闺蜜|室友|老师|导师|班主任|教授|学生|学员|学长|学姐|学弟|学妹|师兄|师姐|师弟|师妹|徒弟|师傅|师父|领导|老板|上司|主管|经理|助理|秘书|员工|下属|同行|合伙人|搭档|客户|甲方|乙方|病人|患者|医生|护士|邻居|房东|租客|保姆|司机|保安|教练|战友|队友|网友|发小|死党|老乡|老人|老者|大爷|大妈|大叔|狗|猫|狗子|猫咪|宠物|乌龟|鹦鹉|他|她|他们|她们|人家";
+const SUBJECT_RE = new RegExp("(" + "(?:我|我们|咱|咱们|俺)?(?:的)?(?:爸爸|爸|爹|父亲|老爸|老爹|妈妈|妈|娘|母亲|老妈|老娘|爷爷|奶奶|外公|外婆|姥姥|姥爷|姥|爷|老爷子|老太太|老头|老伴|那口子|哥哥|哥|姐姐|姐|弟弟|弟|妹妹|妹|儿子|女儿|闺女|丫头|小子|崽|孩子|小孩|娃|宝宝|外甥|外甥女|侄子|侄女|侄儿|孙子|孙女|外孙|外孙女|老婆|妻子|老公|丈夫|媳妇|爱人|对象|男朋友|女朋友|男友|女友|前任|前妻|前夫|岳父|岳母|公公|婆婆|女婿|儿媳|嫂子|姐夫|妹夫|弟妹|叔叔|叔|阿姨|舅舅|舅|姑姑|姑|姨|伯父|大伯|伯母|舅妈|姑父|姨夫|表哥|表姐|表弟|表妹|堂哥|堂姐|堂弟|堂妹|小舅子|大姨子|同事|同学|朋友|哥们|闺蜜|室友|老师|导师|班主任|教授|学生|学员|学长|学姐|学弟|学妹|师兄|师姐|师弟|师妹|徒弟|师傅|师父|领导|老板|上司|主管|经理|助理|秘书|员工|下属|同行|合伙人|搭档|客户|甲方|乙方|病人|患者|医生|护士|邻居|房东|租客|保姆|司机|保安|教练|战友|队友|网友|发小|死党|老乡|老人|老者|大爷|大妈|大叔|狗|猫|狗子|猫咪|宠物|乌龟|鹦鹉|他|她|他们|她们|人家)|(?:这|那)(?:台|辆|个|只|条|间|套|部|本|张|把|双|件|棵|株|家)[一-龥]{0,3}|(?:养|买|有|捡|领养|收养)(?:了)?\\s*(?:一|两|三|几)?\\s*(?:条|只|头|匹|台|辆|部|棵|盆)[一-龥]{0,3}" + ")|(" + "(?:我|俺|本人)(?!们)" + ")", "g");
 const CLAUSE_SPLIT_RE = /[。！？!?；;，,、\n\r…—\s]+/g;
 
-const PAST_RIGHT_RE = /^\s*(?:岁)?\s*(?:那年|那会儿|那会|那阵|那几年|的时候|时候|时[，,]|时我|之前|以前|当年|当时|前后|左右的时候)/;
-const PAST_LEFT_RE = /(?:记得|还记得|想当年|回想|回头看|曾经|以前|从前|小时候|年轻时|当初|那时候|那年|当年)[^。！？!?\n]{0,10}$|(?:熬到|干到|做到|活到|等到|直到|一直到)\s*$/;
-const HYPO_LEFT_RE = /(?:怕|担心|害怕|万一|如果|要是|假如|等到|将来|以后|听说|据说|传说|据传)[^。！？!?\n]{0,8}$/;
-const HYPO_RIGHT_RE = /^\s*(?:岁)?\s*(?:就)?\s*(?:被优化|被裁|裁员|危机|门槛|之前一定|前一定)/;
+const PAST_RIGHT_RE = /^\s*(?:岁)?\s*(?:那年|那会儿|那会|那阵|那阵子|那几年|那时|的时候|时候|时[，,]|时我|之前|以前|当年|当时|前后|左右的时候)/;
+const PERFECTIVE_RE = /^\s*(?:岁)?\s*(?:就|才|上|下|去|才去)?\s*[一-龥]{1,3}的[一-龥]{1,4}\s*$/;
+const PAST_LEFT_RE = /(?:记得|还记得|想当年|回想|回头看|曾经|以前|从前|小时候|年轻时|当初|那时候|那年|那会儿|那会|那阵|那阵子|那几年|那年头|那时|当年|读书时|上学时)[^。！？!?\n]{0,10}$|(?:熬到|干到|做到|活到|等到|直到|一直到|攒到|涨到|降到)\s*$/;
+const HYPO_LEFT_RE = /(?:怕|担心|害怕|万一|如果|要是|假如|将来|以后|听说|据说|传说|据传|计划|打算|准备|争取|力争|目标|期限|盼着|盼望|指望|想在|想着|梦想|立志|规划|希望在)[^。！？!?\n]{0,8}$|等\s*(?:我|你|他|她|孩子|娃)?\s*(?:到了?|长到|活到)?[^。！？\n]{0,4}$/;
+const HYPO_RIGHT_RE = /^\s*(?:岁)?\s*(?:就)?\s*(?:被优化|被裁|裁员|危机|门槛|之前一定|前一定)|^\s*(?:岁)?\s*(?:前|之前|以后|之后|以下|以上|左右就|才能|之前一定)/;
 const DIFF_RE = new RegExp("(?:比|跟|和)\\s*[^，。！？\\n]{0,6}?\\s*(?:大|小)\\s*(?:了)?\\s*" + NUM +
   "\\s*岁|(?:大|小)\\s*(?:我|他|她)\\s*" + NUM + "\\s*岁|(?:差|相差|差了)\\s*" + NUM + "\\s*岁", "g");
 const DECEASED_RIGHT_RE = /^\s*(?:岁)?\s*(?:那年)?\s*(?:就)?\s*(?:走的|去世|过世|离世|不在了|驾鹤|寿终|病逝)|^\s*(?:岁)?\s*(?:那年)?\s*(?:就)?\s*(?:走了|没了)\s*$/;
 const DECEASED_LEFT_RE = /(?:享年|终年)\s*$/;
 const GROUP_RE = /平均|人均|中位|大多数|大部分|普遍|多数人|同龄人|那一辈|一代人|我们班|我们公司|我们那|同事们|同学们/;
-const WISH_RE = /如果|假如|要是|假设|万一|但愿|希望|多希望|恨不得|要能|若能|回到|重来|重活|穿越|梦见|想象|幻想/;
+const WISH_RE = /如果|假如|要是|假设|万一|但愿|希望|多希望|恨不得|要能|若能|回到|重来|重活|穿越|梦见|想象|幻想|宁愿|宁可|真想|好想|巴不得|停在|停留在|变回|退回|回不到|后悔|要不是|当初要是|一辈子停/;
 const FICTION_RE = /角色|主角|女主|男主|主人公|小说|电影|电视剧|动漫|漫画|游戏里|书里|片子|剧里|作者|明星|偶像|演员|扮演|捏了个|设定/;
-const APPARENT_RE = /以为|看着像|看起来|显得|说我像|猜我|误以为|被当成|像个/;
+const APPARENT_RE = /以为|看着像|看起来|显得|说我像|说我长得像|夸我像|猜我|误以为|被当成|像个|长得像|看上去/;
 const UNIT_GUARD = "(?![0-9]|岁|周|楼|层|号|路|室|栋|分|块|元|万|千|毛|角|斤|公斤|克|吨|米|厘|公里|秒|点|天|周|月|年|届|班|名|位|个|人|次|遍|条|件|台|度|平|％|%|k|K)";
+
+const UNKNOWN_KIN_RE = /(?:我|我们|咱)(?:那位|这位|那个|这个|的)?\s*[^0-9零〇一二两俩三仨四五六七八九十拾廿卅卌百今现明昨去前，。！？；\s]{1,3}(?=今年|现在|[0-9零〇一二两三四五六七八九十廿卅]{1,4}\s*岁)/;
+const OBJECT_SELF_RE = /(?:念叨|骂|说|问|告诉|带|教|照顾|陪|骗|夸|批评|表扬|喊|叫|找|等|看|管|养|生|接|送|催|劝|帮|拉|推|打|疼|爱|恨|想|见|跟|对|给|替|和|与|比)\s*$/;
+const PRESENT_ANCHOR_RE = /现在|如今|目前|今年|眼下|这会儿|至今/;
+const NORM_RE = /招聘|启事|岗位|要求|限|卡在|规定|法定|政策|新闻|报道|市场上|这行|门槛|标准|年龄段|以下的|以上的|分水岭/;
+const METAPHOR_RE = /骨龄|骨骼年龄|心脏年龄|血管年龄|肺年龄|皮肤年龄|生理年龄|身体机能|心态上|心理上|心里|精神上|骨子里|感觉自己|觉得自己|还是那个|镜子里|相当于/;
+const QUANTITY_CONTEXT_RE = /体重|身高|称重|工资|月薪|年薪|存款|房贷|分数|成绩|考了|公斤|公里|斤|米|块钱|万元|度|楼|层|号|分钟|小时|价格|降到|涨到/;
+const SENTENCE_SPLIT_RE = /[。！？!?\n\r]+/g;
 
 const CLASSIC_AGES = {"弱冠":20,"而立":30,"不惑":40,"知天命":50,"天命":50,"半百":50,"花甲":60,"古稀":70,"耄耋":80};
 const EDU_STAGE = {"大一":19,"大二":20,"大三":21,"大四":22,"大五":23,"研一":23,"研二":24,"研三":25,
@@ -302,18 +306,46 @@ function clauseSpans(text) {
   if (start < text.length) spans.push([start, text.length]);
   return spans;
 }
+const QUOTE_RE = /["“”'‘’「」『』]/g;
+function inQuote(text, pos) {
+  return (text.slice(0, pos).match(QUOTE_RE) || []).length % 2 === 1;
+}
 function subjectMarks(text) {
   const marks = []; const re = new RegExp(SUBJECT_RE.source, "g"); let m;
   while ((m = re.exec(text)) !== null) {
-    marks.push([m.index, m[1] ? "other" : "self"]);
-    if (m[0].length === 0) re.lastIndex++;
+    if (m[0].length === 0) { re.lastIndex++; continue; }
+    if (m[1]) { marks.push([m.index, "other"]); continue; }
+    const left = text.slice(Math.max(0, m.index - 6), m.index);
+    if (OBJECT_SELF_RE.test(left)) continue;          // 宾语位的"我"
+    if (inQuote(text, m.index)) { marks.push([m.index, "other"]); continue; }
+    const tail = text.slice(m.index + m[0].length, m.index + m[0].length + 12);
+    if (/^[^，。！？；\n]{0,8}的[一-龥]{1,4}/.test(tail)) continue;  // 定语从句
+    marks.push([m.index, "self"]);
   }
+  const kre = new RegExp(UNKNOWN_KIN_RE.source, "g"); let km;
+  while ((km = kre.exec(text)) !== null) {
+    marks.push([km.index + km[0].length - 1, "unknown"]);
+    if (km[0].length === 0) kre.lastIndex++;
+  }
+  marks.sort((a, b) => a[0] - b[0]);
   return marks;
 }
-function subjectAt(pos, clause, marks) {
+function sentenceStart(text, pos) {
+  const re = new RegExp(SENTENCE_SPLIT_RE.source, "g");
+  let start = 0, m;
+  while ((m = re.exec(text)) !== null) {
+    if (m.index + m[0].length <= pos) start = m.index + m[0].length; else break;
+    if (m[0].length === 0) re.lastIndex++;
+  }
+  return start;
+}
+function subjectAt(pos, clause, marks, text) {
   const inClause = marks.filter(([p]) => clause[0] <= p && p <= pos);
   if (inClause.length) return inClause[inClause.length - 1][1];
-  const before = marks.filter(([p]) => p < clause[0]);
+  const after = marks.filter(([p]) => pos < p && p < clause[1]);
+  if (after.length && after[0][1] === "other") return "other";
+  const sStart = text ? sentenceStart(text, clause[0]) : 0;
+  const before = marks.filter(([p]) => sStart <= p && p < clause[0]);
   return before.length ? before[before.length - 1][1] : "unknown";
 }
 
@@ -324,11 +356,17 @@ function blocked(text, start, end, clause) {
   const clauseText = text.slice(cStart, cEnd);
   if (DECEASED_LEFT_RE.test(left) || DECEASED_RIGHT_RE.test(right)) return "逝者年龄";
   if (HYPO_LEFT_RE.test(left) || HYPO_RIGHT_RE.test(right)) return "假设/未来的年龄";
-  if (PAST_LEFT_RE.test(left) || PAST_RIGHT_RE.test(right)) return "过去的年龄";
+  if (PAST_LEFT_RE.test(left) || PAST_RIGHT_RE.test(right)
+      || PERFECTIVE_RE.test(text.slice(end, cEnd))) return "过去的年龄";
   if (GROUP_RE.test(clauseText)) return "群体/平均年龄";
   if (WISH_RE.test(clauseText)) return "假设语气";
   if (FICTION_RE.test(clauseText)) return "虚构人物";
+  if (NORM_RE.test(clauseText)) return "外部年龄标准";
+  if (METAPHOR_RE.test(clauseText)) return "比喻/体检年龄";
   if (APPARENT_RE.test(text.slice(cStart, start))) return "别人以为的年龄";
+  if (QUANTITY_CONTEXT_RE.test(clauseText)
+      && !text.slice(start, Math.min(end + 2, cEnd)).includes("岁"))
+    return "数量而非年龄";
   const dre = new RegExp(DIFF_RE.source, "g"); let dm;
   while ((dm = dre.exec(clauseText)) !== null) {
     if (dm.index <= start - cStart && start - cStart < dm.index + dm[0].length) return "年龄差值";
@@ -427,7 +465,8 @@ function collectCands(text, currentYear) {
   each(NUM + "\\s*岁", (m) => add(n(m[1]), 1, 92, m, "文中写明年龄", null, true));
 
   /* --- tier 2: 出生年份 --- */
-  each("(19\\d{2}|20[0-2]\\d)\\s*年?[^，。！？\\n]{0,6}?(出生|生人|生的|生)",
+  each("(19\\d{2}|20[0-2]\\d)\\s*年?[^，。！？\\n]{0,6}?"
+       + "(?:出生|生人|生的|生(?![意活产长机命病气死物存育娃]))",
        (m) => add(currentYear - parseInt(m[1], 10), 2, 90, m, "由出生年份推算"));
   each("(?:出生于|生于)\\s*(19\\d{2}|20[0-2]\\d)",
        (m) => add(currentYear - parseInt(m[1], 10), 2, 90, m, "由出生年份推算"));
@@ -481,7 +520,7 @@ function collectCands(text, currentYear) {
   /* --- tier 5: 在读学段 --- */
   each(Object.keys(EDU_STAGE).join("|"), (m) => add(EDU_STAGE[m[0]], 5, 62, m, "由在读年级推算"));
   each("小学\\s*" + NUM + "\\s*年级", (m) => { const v = n(m[1]); add(v ? 6 + v : null, 5, 60, m, "由在读年级推算"); });
-  each("(?:^|[^大高初中学])" + NUM + "\\s*年级", (m) => {
+  each("(?:^|[^大高初中学教带])" + NUM + "\\s*年级", (m) => {
     const v = n(m[1]);
     if (v !== null && v >= 1 && v <= 6) add(6 + v, 5, 58, m, "由在读年级推算");
   });
@@ -541,14 +580,32 @@ function extractAge(text, currentYear) {
   const clauseOf = (pos) => clauses.find(([s, e]) => s <= pos && pos < e) || [0, text.length];
 
   const accepted = [], pastCands = [];
-  for (const cand of collectCands(text, currentYear)) {
+  let lastPastEnd = -1;
+  const cands = collectCands(text, currentYear).sort((a, b) => a.start - b.start);
+  for (const cand of cands) {
     const clause = clauseOf(cand.start);
     let reason = blocked(text, cand.start, cand.end, clause);
-    const subject = subjectAt(cand.start, clause, marks);
+
+    // 出生年、里程碑年份是绝对锚点，换算出的就是当前年龄，不受时态影响
+    const absoluteAnchor = (cand.tier === 2 || cand.tier === 4);
+    if (reason === "过去的年龄" && absoluteAnchor) reason = null;
+
+    // 时态继承：前文已在讲往事且中间没有现在时锚点，这里也是往事
+    if (reason === null && !absoluteAnchor && lastPastEnd >= 0 && lastPastEnd < cand.start) {
+      const between = text.slice(lastPastEnd, cand.start);
+      if (between.length <= 40 && !PRESENT_ANCHOR_RE.test(between)) reason = "过去的年龄";
+    }
+
+    const subject = subjectAt(cand.start, clause, marks, text);
     if (reason === null) {
       if (subject === "other") reason = "说的是别人";
-      else if (subject === "unknown") cand.conf -= 10;
+      else if (subject === "unknown") {
+        const sStart = sentenceStart(text, cand.start);
+        const otherBefore = marks.some(([p, k]) => k === "other" && sStart <= p && p < cand.start);
+        if (otherBefore) reason = "说不准是谁的年龄"; else cand.conf -= 10;
+      }
     }
+    if (reason === "过去的年龄") lastPastEnd = cand.end;
     if (reason) {
       if (reason === "过去的年龄" && subject !== "other") pastCands.push(cand);
       result.rejected.push({text: cand.evidence, reason, age: cand.age});
@@ -575,7 +632,8 @@ function extractAge(text, currentYear) {
   accepted.sort((a, b) => (a.tier - b.tier) || (b.conf - a.conf) || (a.start - b.start));
   const best = accepted[0];
 
-  const strong = accepted.filter(c => c.tier === 1 && c.conf >= 80);
+  const strong = accepted.filter(c => c.tier === 1 && c.conf >= 80
+    && /(?:我|本人|今年|年龄|年纪|岁数)/.test(text.slice(Math.max(0, c.start - 8), c.end)));
   if (strong.length > 1) {
     const hi = Math.max(...strong.map(c => c.age)), lo = Math.min(...strong.map(c => c.age));
     if (hi - lo >= 2) {

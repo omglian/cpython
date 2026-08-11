@@ -32,7 +32,7 @@ import re
 from .cn_number import cn_to_int
 
 # 阿拉伯数字或中文数字（年龄、年级、年限都在 0~999 内）
-_NUM = r"(\d{1,3}|[零〇一二两俩三仨四五六七八九十拾廿卅百]{1,4})"
+_NUM = r"(\d{1,3}|[零〇一二两俩三仨四五六七八九十拾廿卅卌百]{1,4})"
 
 # 中文年份逐字映射——绝不能走 cn_to_int（"一九九五"是四个数字并排，不是位值）
 _YEAR_DIGITS = {"零": "0", "〇": "0", "○": "0", "一": "1", "二": "2", "三": "3",
@@ -63,18 +63,60 @@ def _century(yy, current_year):
 # 他者：亲属 + 社会关系 + 第三人称代词。允许"我/我的"前缀，
 # 这样"我女儿"会整体匹配成他者，而不是先匹配到"我"。
 _OTHER_WORDS = (
-    "爸爸|爸|父亲|老爸|妈妈|妈|母亲|老妈|爷爷|奶奶|外公|外婆|姥姥|姥爷|"
-    "哥哥|哥|姐姐|姐|弟弟|弟|妹妹|妹|儿子|女儿|孩子|娃|外甥|侄子|侄女|"
-    "孙子|孙女|老婆|妻子|老公|丈夫|媳妇|爱人|对象|男朋友|女朋友|男友|女友|"
-    "前任|前妻|前夫|叔叔|阿姨|舅舅|姑姑|姨|伯父|表哥|表姐|表弟|表妹|堂哥|"
-    "同事|同学|朋友|哥们|闺蜜|室友|老师|学生|学员|徒弟|师傅|领导|老板|"
-    "客户|甲方|病人|患者|邻居|房东|租客|保姆|司机|员工|下属|教练|"
-    "他|她|他们|她们"
+    # 直系与长辈（含口语：爹娘、老爷子、姥、爷）
+    "爸爸|爸|爹|父亲|老爸|老爹|妈妈|妈|娘|母亲|老妈|老娘|爷爷|奶奶|"
+    "外公|外婆|姥姥|姥爷|姥|爷|老爷子|老太太|老头|老伴|那口子|"
+    # 平辈与晚辈（含口语：闺女、丫头、小子）
+    "哥哥|哥|姐姐|姐|弟弟|弟|妹妹|妹|儿子|女儿|闺女|丫头|小子|崽|"
+    "孩子|小孩|娃|宝宝|外甥|外甥女|侄子|侄女|侄儿|孙子|孙女|外孙|外孙女|"
+    # 配偶与姻亲
+    "老婆|妻子|老公|丈夫|媳妇|爱人|对象|男朋友|女朋友|男友|女友|"
+    "前任|前妻|前夫|岳父|岳母|公公|婆婆|女婿|儿媳|嫂子|姐夫|妹夫|弟妹|"
+    # 旁系亲属
+    "叔叔|叔|阿姨|舅舅|舅|姑姑|姑|姨|伯父|大伯|伯母|舅妈|姑父|姨夫|"
+    "表哥|表姐|表弟|表妹|堂哥|堂姐|堂弟|堂妹|小舅子|大姨子|"
+    # 学习与工作关系
+    "同事|同学|朋友|哥们|闺蜜|室友|老师|导师|班主任|教授|学生|学员|"
+    "学长|学姐|学弟|学妹|师兄|师姐|师弟|师妹|徒弟|师傅|师父|"
+    "领导|老板|上司|主管|经理|助理|秘书|员工|下属|同行|合伙人|搭档|"
+    # 其他社会关系
+    "客户|甲方|乙方|病人|患者|医生|护士|邻居|房东|租客|保姆|司机|保安|"
+    "教练|战友|队友|网友|发小|死党|老乡|老人|老者|大爷|大妈|大叔|"
+    # 宠物也会被写年龄（"家里养了条狗，6岁了"）
+    "狗|猫|狗子|猫咪|宠物|乌龟|鹦鹉|"
+    # 第三人称代词
+    "他|她|他们|她们|人家"
 )
-_OTHER_RE = r"(?:我|我们|咱|咱们|俺)?(?:的)?(?:%s)" % _OTHER_WORDS
+_OTHER_RE = (
+    r"(?:我|我们|咱|咱们|俺)?(?:的)?(?:%s)"
+    # 指示短语引入的另一个主体："这台车明年就20了"说的不是人的年龄
+    r"|(?:这|那)(?:台|辆|个|只|条|间|套|部|本|张|把|双|件|棵|株|家)[一-龥]{0,3}"
+    # 量词短语同理："家里还养了条狗，6岁了"
+    r"|(?:养|买|有|捡|领养|收养)(?:了)?\s*(?:一|两|三|几)?\s*"
+    r"(?:条|只|头|匹|台|辆|部|棵|盆)[一-龥]{0,3}"
+    % _OTHER_WORDS)
 # "我"但不是"我们"；"我们"按他者处理（"我们领导""我们班"都不是本人）
 _SELF_RE = r"(?:我|俺|本人)(?!们)"
 _SUBJECT_RE = re.compile("(%s)|(%s)" % (_OTHER_RE, _SELF_RE))
+
+# "我" + 一个不在词表里的称谓（"我表侄""我那位战友"）：说不准是谁，按未知处理，
+# 总好过把陌生称谓的年龄安到使用者头上。
+_UNKNOWN_KIN_RE = re.compile(
+    r"(?:我|我们|咱)(?:那位|这位|那个|这个|的)?\s*"
+    # 中间必须是称谓性的词：排除数字与时间词，否则"我今年三十八岁"
+    # 会被当成"我+称谓'今年三'"，把使用者自己的年龄判成陌生人的
+    r"[^0-9零〇一二两俩三仨四五六七八九十拾廿卅卌百今现明昨去前，。！？；\s]{1,3}"
+    r"(?=今年|现在|[0-9零〇一二两三四五六七八九十廿卅]{1,4}\s*岁)")
+
+# "我"在这些词后面是宾语不是主语："我爸念叨我"里的"我"不能当主语
+_OBJECT_MARKERS = (
+    "念叨|骂|说|问|告诉|带|教|照顾|陪|骗|夸|批评|表扬|喊|叫|找|等|"
+    "看|管|养|生|接|送|催|劝|帮|拉|推|打|疼|爱|恨|想|见|跟|对|给|替|和|与|比")
+_OBJECT_SELF_RE = re.compile(r"(?:%s)\s*$" % _OBJECT_MARKERS)
+
+# 引号内的第一人称是别人的自述："他说'我今年40了'"
+_QUOTE_RE = re.compile(r"[\"“”'‘’「」『』]")
+_SPEECH_VERB_RE = re.compile(r"(?:说|讲|问|答|回|抱怨|感慨|念叨|嘟囔|表示)\s*[:：]?\s*$")
 
 SELF, OTHER, UNKNOWN = "self", "other", "unknown"
 
@@ -94,27 +136,74 @@ def _clause_spans(text):
     return spans
 
 
+def _in_quote(text, pos):
+    """位置是否落在引号里（引号内的"我"是被引述者的自称）。"""
+    return len(_QUOTE_RE.findall(text[:pos])) % 2 == 1
+
+
 def _subject_marks(text):
-    """全文里所有主语出现的位置：[(位置, SELF/OTHER)]。"""
+    """全文里所有主语出现的位置：[(位置, SELF/OTHER)]。
+
+    三种情况下的"我"不算第一人称主语：
+    * 宾语位（"我爸念叨我"）
+    * 定语从句里（"跟我一起长大的发小"——中心词才是主语）
+    * 引号内（"他说'我今年40了'"）
+    """
     marks = []
     for m in _SUBJECT_RE.finditer(text):
-        marks.append((m.start(), OTHER if m.group(1) else SELF))
+        if m.group(1):
+            marks.append((m.start(), OTHER))
+            continue
+        left = text[max(0, m.start() - 6):m.start()]
+        if _OBJECT_SELF_RE.search(left):
+            continue                      # 宾语位的"我"
+        if _in_quote(text, m.start()):
+            marks.append((m.start(), OTHER))   # 引述别人的自称
+            continue
+        # 定语从句："…我…的 + 名词"，真正的主语是后面那个名词
+        tail = text[m.end():m.end() + 12]
+        if re.match(r"[^，。！？；\n]{0,8}的[一-龥]{1,4}", tail):
+            continue
+        marks.append((m.start(), SELF))
+    # "我" + 未收录称谓 → 未知归属，防止陌生称谓穿透成第一人称
+    for m in _UNKNOWN_KIN_RE.finditer(text):
+        if not _SUBJECT_RE.match(text, m.start()) or \
+                _SUBJECT_RE.match(text, m.start()).group(1) is None:
+            marks.append((m.end() - 1, UNKNOWN))
+    marks.sort()
     return marks
 
 
-def _subject_at(pos, clause, marks):
+_SENTENCE_SPLIT_RE = re.compile(r"[。！？!?\n\r]+")
+
+
+def _sentence_start(text, pos):
+    """候选所在句子的起点。主语继承不跨句——中文里换一句话通常会
+    重新确立主语，顺口提到的"班主任""同事"不该污染后面的句子。"""
+    starts = [m.end() for m in _SENTENCE_SPLIT_RE.finditer(text)
+              if m.end() <= pos]
+    return starts[-1] if starts else 0
+
+
+def _subject_at(pos, clause, marks, text=""):
     """判断某个位置的候选归属于谁。
 
-    规则：先看同一小句里该位置**之前**最后一个主语；没有就继承前文
-    最后一个主语（中文里主语常跨句延续）；都没有则未知。
+    先看同一小句里该位置**之前**最后一个主语；没有就看小句里位置
+    之后的主语（"今年五十岁的是我妈"这种判断句语序）；再没有就继承
+    **同一句话内**前面的主语；都没有则未知。
     """
-    c_start, _c_end = clause
+    c_start, c_end = clause
     # 用 <= ：主语可能正是候选自己的开头（"我是1988年的"里的"我"），
     # 而他者模式会把"我女儿"整体吃掉，所以不会误判成第一人称。
     in_clause = [k for (p, k) in marks if c_start <= p <= pos]
     if in_clause:
         return in_clause[-1]
-    before = [k for (p, k) in marks if p < c_start]
+    # 后视：主语出现在数字之后（"今年五十岁的是我妈"）
+    after = [k for (p, k) in marks if pos < p < c_end]
+    if after and after[0] == OTHER:
+        return OTHER
+    s_start = _sentence_start(text, c_start) if text else 0
+    before = [k for (p, k) in marks if s_start <= p < c_start]
     return before[-1] if before else UNKNOWN
 
 
@@ -123,20 +212,48 @@ def _subject_at(pos, clause, marks):
 # ---------------------------------------------------------------------------
 
 _PAST_RIGHT_RE = re.compile(
-    r"^\s*(?:岁)?\s*(?:那年|那会儿|那会|那阵|那几年|的时候|时候|时[，,]|时我|"
-    r"之前|以前|当年|当时|前后|左右的时候)")
+    r"^\s*(?:岁)?\s*(?:那年|那会儿|那会|那阵|那阵子|那几年|那时|的时候|时候|"
+    r"时[，,]|时我|之前|以前|当年|当时|前后|左右的时候)")
+# 完成体"V+的+O"：我25岁结的婚 / 30岁买的房 / 18岁去当的兵。
+# 要在**小句范围内**判断——"我25岁结的婚，那年刚工作"里"结的婚"到逗号为止。
+_PERFECTIVE_RE = re.compile(
+    r"^\s*(?:岁)?\s*(?:就|才|上|下|去|才去)?\s*[一-龥]{1,3}的[一-龥]{1,4}\s*$")
 _PAST_LEFT_RE = re.compile(
     r"(?:记得|还记得|想当年|回想|回头看|曾经|以前|从前|小时候|年轻时|当初|"
-    r"那时候|那年|当年)[^。！？!?\n]{0,10}$"
+    r"那时候|那年|那会儿|那会|那阵|那阵子|那几年|那年头|那时|当年|"
+    r"读书时|上学时)[^。！？!?\n]{0,10}$"
     # "熬到六十岁才办的手续"——到达某个年龄，说的是过去的时点
-    r"|(?:熬到|干到|做到|活到|等到|直到|一直到)\s*$")
+    r"|(?:熬到|干到|做到|活到|等到|直到|一直到|攒到|涨到|降到)\s*$")
 
-# 假设/未来语气："又怕35岁被优化"里的 35 岁不是当前年龄
+# 回溯叙事标记：整段在讲往事，段内的年龄都不是当前年龄
+_RETROSPECT_RE = re.compile(
+    r"那时候|那会儿|那阵子|后来|再后来|一晃|回头看|如今想来|现在想想")
+# 现在时锚点：出现后，回溯语境结束
+_PRESENT_ANCHOR_RE = re.compile(r"现在|如今|目前|今年|眼下|这会儿|至今")
+
+# 假设/未来/意图语气："又怕35岁被优化""我计划40岁前还完房贷"
 _HYPOTHETICAL_LEFT_RE = re.compile(
-    r"(?:怕|担心|害怕|万一|如果|要是|假如|等到|将来|以后|听说|据说|"
-    r"传说|据传)[^。！？!?\n]{0,8}$")
+    r"(?:怕|担心|害怕|万一|如果|要是|假如|将来|以后|听说|据说|传说|据传|"
+    # 意图与计划：中文表达未来目标最常用的一批词
+    r"计划|打算|准备|争取|力争|目标|期限|盼着|盼望|指望|想在|想着|梦想|"
+    r"立志|规划|希望在)[^。！？!?\n]{0,8}$"
+    # "等我到40岁"——主语常插在"等"和"到"中间
+    r"|等\s*(?:我|你|他|她|孩子|娃)?\s*(?:到了?|长到|活到)?[^。！？\n]{0,4}$")
 _HYPOTHETICAL_RIGHT_RE = re.compile(
-    r"^\s*(?:岁)?\s*(?:就)?\s*(?:被优化|被裁|裁员|危机|门槛|之前一定|前一定)")
+    r"^\s*(?:岁)?\s*(?:就)?\s*(?:被优化|被裁|裁员|危机|门槛|之前一定|前一定)"
+    # "40岁前把房贷还完""35岁以下"——年龄作为界标而非当前状态
+    r"|^\s*(?:岁)?\s*(?:前|之前|以后|之后|以下|以上|左右就|才能|之前一定)")
+
+# 引用外部年龄标准：招聘门槛、政策规定，不是本人年龄
+_NORM_RE = re.compile(
+    r"招聘|启事|岗位|要求|限|卡在|规定|法定|政策|新闻|报道|市场上|这行|"
+    r"门槛|标准|年龄段|以下的|以上的|分水岭")
+
+# 体检/比喻年龄：心脏年龄、骨龄、"心态上还是18岁"都不是实际年龄
+_METAPHOR_RE = re.compile(
+    r"骨龄|骨骼年龄|心脏年龄|血管年龄|肺年龄|皮肤年龄|生理年龄|身体机能|"
+    r"心态上|心理上|心里|精神上|骨子里|感觉自己|觉得自己|还是那个|镜子里|"
+    r"相当于")
 
 _DIFF_RE = re.compile(
     r"(?:比|跟|和)\s*[^，。！？\n]{0,6}?\s*(?:大|小)\s*(?:了)?\s*%s\s*岁"
@@ -158,7 +275,9 @@ _GROUP_RE = re.compile(
 # 虚拟语气："要是能回到18岁" —— 愿望不是事实
 _WISH_RE = re.compile(
     r"如果|假如|要是|假设|万一|但愿|希望|多希望|恨不得|要能|若能|"
-    r"回到|重来|重活|穿越|梦见|想象|幻想")
+    r"回到|重来|重活|穿越|梦见|想象|幻想|"
+    r"宁愿|宁可|真想|好想|巴不得|停在|停留在|变回|退回|回不到|"
+    r"后悔|要不是|当初要是|一辈子停")
 
 # 虚构语境："游戏里我捏了个25岁的角色" —— 有"我"也不是我的年龄
 _FICTION_RE = re.compile(
@@ -167,7 +286,13 @@ _FICTION_RE = re.compile(
 
 # 表象年龄："别人都以为我25岁" —— 是别人的猜测，不是事实
 _APPARENT_RE = re.compile(
-    r"以为|看着像|看起来|显得|说我像|猜我|误以为|被当成|像个")
+    r"以为|看着像|看起来|显得|说我像|说我长得像|夸我像|猜我|误以为|被当成|"
+    r"像个|长得像|看上去")
+
+# 数量语境：小句里在谈体重/身高/工资/分数时，不带"岁"字的数字不是年龄
+_QUANTITY_CONTEXT_RE = re.compile(
+    r"体重|身高|称重|工资|月薪|年薪|存款|房贷|分数|成绩|考了|公斤|公里|"
+    r"斤|米|块钱|万元|度|楼|层|号|分钟|小时|价格|降到|涨到")
 
 # 数字后面跟这些单位就不是年龄（用于允许省略"岁"的宽松模式）
 _UNIT_GUARD = (r"(?![0-9]|岁|周|楼|层|号|路|室|栋|分|块|元|万|千|毛|角|斤|"
@@ -186,7 +311,8 @@ def _blocked(text, start, end, clause):
         return "逝者年龄"
     if _HYPOTHETICAL_LEFT_RE.search(left) or _HYPOTHETICAL_RIGHT_RE.match(right):
         return "假设/未来的年龄"
-    if _PAST_LEFT_RE.search(left) or _PAST_RIGHT_RE.match(right):
+    if _PAST_LEFT_RE.search(left) or _PAST_RIGHT_RE.match(right) \
+            or _PERFECTIVE_RE.match(text[end:c_end]):
         return "过去的年龄"
     if _GROUP_RE.search(clause_text):
         return "群体/平均年龄"
@@ -194,8 +320,16 @@ def _blocked(text, start, end, clause):
         return "假设语气"
     if _FICTION_RE.search(clause_text):
         return "虚构人物"
+    if _NORM_RE.search(clause_text):
+        return "外部年龄标准"
+    if _METAPHOR_RE.search(clause_text):
+        return "比喻/体检年龄"
     if _APPARENT_RE.search(text[c_start:start]):
         return "别人以为的年龄"
+    # 谈论数量的句子里，没有"岁"字的数字不是年龄（"体重八十出头"）
+    if _QUANTITY_CONTEXT_RE.search(clause_text) \
+            and "岁" not in text[start:min(end + 2, c_end)]:
+        return "数量而非年龄"
     for m in _DIFF_RE.finditer(clause_text):
         if m.start() <= start - c_start < m.end():
             return "年龄差值"
@@ -306,15 +440,16 @@ def _collect(text, current_year):
     for m in re.finditer(_NUM + r"\s*岁\s*(?:的)?生日\s*(?:刚|才|刚刚)?\s*(?:过完|过了|过)", text):
         add(_n(m.group(1)), 1, 90, m, "由生日推算")
     # 去年/前年的年龄要加回来
-    for m in re.finditer(r"(去年|上一年|前年)\s*(?:我)?\s*(?:才|刚|就|已经)?\s*"
-                         + _NUM + r"\s*(?:岁|了)", text):
+    for m in re.finditer(r"(去年|上一年|前年)\s*(?:我\s*)?(?:才|刚|就|已经)?\s*"
+                         + _NUM + r"\s*(?:岁|了(?=[，,。！？\s]|$))", text):
         n = _n(m.group(2))
         if n is not None:
             add(n + (2 if m.group(1) == "前年" else 1), 1, 78, m,
                 "由'%s的年龄'推算" % m.group(1))
     # 明年/再过N年就X了 —— 未来时要减回来
-    for m in re.finditer(r"(?:明年|过完年|过了年|开年|开春)\s*(?:我)?\s*"
-                         r"(?:就|才|要|便)?\s*" + _NUM + r"\s*(?:岁)?\s*了", text):
+    for m in re.finditer(r"(?:我\s*)?(?:明年|过完年|过了年|开年|开春)\s*(?:我\s*)?"
+                         r"(?:就|才|要|便)?\s*" + _NUM
+                         + r"\s*(?:岁\s*了|了" + _UNIT_GUARD + r")", text):
         n = _n(m.group(1))
         add(n - 1 if n else None, 1, 76, m, "由'明年就某岁'推算")
     for m in re.finditer(r"(?:再过|还有)\s*" + _NUM + r"\s*年\s*(?:我)?\s*"
@@ -323,7 +458,7 @@ def _collect(text, current_year):
         if span and target:
             add(target - span, 1, 74, m, "由'再过几年就某岁'推算")
     # 简历式自述："本人男，32，北京"
-    for m in re.finditer(r"(?:本人|我)?\s*[男女]\s*[,，、/|]\s*(\d{1,3})\s*(?=[,，、/|。]|$)", text):
+    for m in re.finditer(r"(?:本人|我)\s*[，,]?\s*[男女]\s*[,，、/|]\s*(\d{1,3})\s*(?=[,，、/|。]|$)", text):
         add(int(m.group(1)), 1, 76, m, "由自述格式识别")
     # --- tier 2: 年份锚点折算 —— "2008年我18岁" → 现在 36 岁 ---
     for m in re.finditer(r"(19\d{2}|20[0-2]\d)\s*年[^。！？；\n]{0,8}?我\s*"
@@ -354,7 +489,7 @@ def _collect(text, current_year):
     # 过去时锚点："刚参加工作那年我二十二"——没有"岁"字，但有时间标记。
     # 定位到数字本身，好让左侧的"那年"被过去时判定捕获，进而参与组合推算。
     for m in re.finditer(r"(?:那年|那一年|当年|那会儿|当时|时)\s*我\s*" + _NUM
-                         + r"(?![0-9岁点块元万千年月日分楼层号个])", text):
+                         + _UNIT_GUARD, text):
         add(_n(m.group(1)), 1, 70, m, "文中写明年龄", span_group=1)
     # 口语里常直接以"26了"开头，前面既没有"我"也没有"岁"
     for c_start, c_end in _clause_spans(text):
@@ -367,7 +502,8 @@ def _collect(text, current_year):
                                  m.group(0).strip()))
 
     # --- tier 2: 出生年份 ---
-    for m in re.finditer(r"(19\d{2}|20[0-2]\d)\s*年?[^，。！？\n]{0,6}?(出生|生人|生的|生)", text):
+    for m in re.finditer(r"(19\d{2}|20[0-2]\d)\s*年?[^，。！？\n]{0,6}?"
+                         r"(?:出生|生人|生的|生(?![意活产长机命病气死物存育娃]))", text):
         add(current_year - int(m.group(1)), 2, 90, m, "由出生年份推算")
     for m in re.finditer(r"(?:出生于|生于)\s*(19\d{2}|20[0-2]\d)", text):
         add(current_year - int(m.group(1)), 2, 90, m, "由出生年份推算")
@@ -388,10 +524,11 @@ def _collect(text, current_year):
                 add(current_year - y, 2, 80, m, "由出生年份推算")
 
     # --- tier 3: 概数年龄 ---
-    for m in re.finditer(r"(?:快|将近|接近|差不多|马上|眼看|就要)\s*" + _NUM + r"\s*(?:岁|了)", text):
+    for m in re.finditer(r"(?:快|将近|接近|差不多|马上|眼看|就要)\s*(?:我)?\s*"
+                         + _NUM + r"\s*(?:岁|了)", text):
         n = _n(m.group(1))
         add(n - 1 if n else None, 3, 70, m, "由'快到某岁'估算")
-    for m in re.finditer(_NUM + r"\s*(?:岁)?\s*出头", text):
+    for m in re.finditer(_NUM + r"\s*岁?\s*出头(?![0-9])", text):
         n = _n(m.group(1))
         add(n + 2 if n else None, 3, 70, m, "由'某岁出头'估算")
     for m in re.finditer(_NUM + r"\s*多岁", text):
@@ -399,7 +536,7 @@ def _collect(text, current_year):
         add(n + 4 if n else None, 3, 66, m, "由'某十多岁'估算")
     for m in re.finditer(_NUM + r"\s*来岁", text):
         add(_n(m.group(1)), 3, 66, m, "由'某十来岁'估算")
-    for m in re.finditer(_NUM + r"\s*岁?\s*好几", text):
+    for m in re.finditer(_NUM + r"\s*岁\s*好几", text):
         n = _n(m.group(1))
         add(n + 5 if n else None, 3, 64, m, "由'某十好几'估算")
     for m in _CLASSIC_RE.finditer(text):
@@ -414,7 +551,8 @@ def _collect(text, current_year):
         add(16, 3, 60, m, "由'二八年华'推算")
 
     # --- tier 4: 里程碑年份 ---
-    for m in re.finditer(r"(19\d{2}|20[0-2]\d)\s*年?\s*(?:参加)?\s*高考", text):
+    for m in re.finditer(r"(19\d{2}|20[0-2]\d)\s*年?\s*(?:参加)?\s*"
+                         r"高考(?!作文|题|试卷|新闻|政策|改革|人数)", text):
         add(current_year - int(m.group(1)) + 18, 4, 74, m, "由高考年份推算")
     for m in re.finditer(r"高考\s*(?:是在|在|是)\s*(19\d{2}|20[0-2]\d)", text):
         add(current_year - int(m.group(1)) + 18, 4, 74, m, "由高考年份推算")
@@ -436,7 +574,7 @@ def _collect(text, current_year):
         n = _n(m.group(1))
         add(6 + n if n else None, 5, 60, m, "由在读年级推算")
     # 裸年级："我上五年级了"——1~6 年级按小学算
-    for m in re.finditer(r"(?<![大高初中学])" + _NUM + r"\s*年级", text):
+    for m in re.finditer(r"(?<![大高初中学教带])" + _NUM + r"\s*年级", text):
         n = _n(m.group(1))
         if n is not None and 1 <= n <= 6:
             add(6 + n, 5, 58, m, "由在读年级推算")
@@ -448,7 +586,7 @@ def _collect(text, current_year):
         add(18, 5, 60, m, "由'即将高考'推算")
 
     # --- tier 6: 代际 ---
-    for m in re.finditer(r"(\d{2})\s*后(?![来面续期]|勤)", text):
+    for m in re.finditer(r"(?<![过到于])(\d{2})\s*后(?![来面续期]|勤)(?![我才就的]?[0-9])", text):
         yy = int(m.group(1))
         if yy % 10 == 0:      # 90后 → 取该十年中点
             born = _century(yy, current_year) + 5
@@ -552,16 +690,47 @@ def extract_age(text, current_year=2026):
                 return span
         return (0, len(text))
 
+    has_self = any(k == SELF for (_p, k) in marks)
+    has_other = any(k == OTHER for (_p, k) in marks)
+
     accepted, past_cands = [], []
-    for cand in _collect(text, current_year):
+    last_past_end = -1   # 上一个"过去年龄"候选的位置，用于时态继承
+    for cand in sorted(_collect(text, current_year), key=lambda c: c.start):
         clause = clause_of(cand.start)
         reason = _blocked(text, cand.start, cand.end, clause)
-        subject = _subject_at(cand.start, clause, marks)
+
+        # 出生年、里程碑年份是绝对时间锚点，本身换算出的就是当前年龄，
+        # 不受时态影响——"2019年毕业"无论出现在多少回忆之后都成立。
+        absolute_anchor = cand.tier in (2, 4)
+        if reason == "过去的年龄" and absolute_anchor:
+            reason = None
+
+        # 时态继承：前一句已在讲往事，中间又没有出现"现在/今年"这类
+        # 现在时锚点，那么这一句的年龄同样属于往事。
+        # "我18岁那年考上大学，22岁毕业进了国企" —— 22 也是过去的年龄。
+        if reason is None and not absolute_anchor \
+                and 0 <= last_past_end < cand.start:
+            between = text[last_past_end:cand.start]
+            if len(between) <= 40 and not _PRESENT_ANCHOR_RE.search(between):
+                reason = "过去的年龄"
+
+        subject = _subject_at(cand.start, clause, marks, text)
         if reason is None:
             if subject == OTHER:
                 reason = "说的是别人"
             elif subject == UNKNOWN:
-                cand.conf -= 10  # 没有明确主语，可信度打折但不丢弃
+                # 没有明确主语时，看这句之前有没有出现过别人：出现过就
+                # 可能是在接着说别人（"床上那位老人今年九十五岁"），不认领；
+                # 没出现过则默认是叙述者自己（"26了 还在读研"），但打折。
+                s_start = _sentence_start(text, cand.start)
+                other_before = any(k == OTHER and s_start <= p < cand.start
+                                   for (p, k) in marks)
+                if other_before:
+                    reason = "说不准是谁的年龄"
+                else:
+                    cand.conf -= 10
+        if reason == "过去的年龄":
+            last_past_end = cand.end
         if reason:
             # 属于本人的"过去年龄"留着做组合推算，别人的直接扔掉
             if reason == "过去的年龄" and subject != OTHER:
@@ -587,7 +756,11 @@ def extract_age(text, current_year=2026):
     # 熔断：若有两个都很可信的当前年龄互相矛盾（差 2 岁以上），
     # 说明文本本身有歧义——诚实返回"无法判断"，而不是二选一。
     # 差 1 岁不算矛盾（出生年折算 vs 自述，生日没过就差一岁）。
-    strong = [c for c in accepted if c.tier == 1 and c.conf >= 80]
+    # 只有"我"直接锚定的自述年龄才参与矛盾判定——否则一个漏网的他人年龄
+    # 会把使用者明明白白写出来的年龄一起熔断掉。
+    strong = [c for c in accepted if c.tier == 1 and c.conf >= 80
+              and re.search(r"(?:我|本人|今年|年龄|年纪|岁数)",
+                            text[max(0, c.start - 8):c.end])]
     if len(strong) > 1 and max(c.age for c in strong) - min(c.age for c in strong) >= 2:
         result["how"] = "文中出现了互相矛盾的年龄"
         result["rejected"].append({
