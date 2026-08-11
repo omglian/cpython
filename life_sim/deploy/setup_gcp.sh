@@ -28,6 +28,15 @@ if [ ! -f "$DEST_DIR/data/events.json" ]; then
 fi
 chown -R www-data:www-data "$DEST_DIR"
 
+echo "==> 安装部署脚本与自动跟随更新"
+mkdir -p "$DEST_DIR/deploy"
+cp "$SRC_DIR/deploy/setup_gcp.sh" "$SRC_DIR/deploy/autoupdate.sh" \
+   "$SRC_DIR/deploy/lifesim.service" "$DEST_DIR/deploy/"
+chmod +x "$DEST_DIR/deploy/setup_gcp.sh" "$DEST_DIR/deploy/autoupdate.sh"
+cat > /etc/cron.d/lifesim-autoupdate <<'CRON'
+*/10 * * * * root /bin/bash /opt/life_sim/deploy/autoupdate.sh >> /var/log/lifesim-autoupdate.log 2>&1
+CRON
+
 echo "==> 安装 systemd 服务"
 cp "$SRC_DIR/deploy/lifesim.service" /etc/systemd/system/lifesim.service
 systemctl daemon-reload
