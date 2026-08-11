@@ -1,0 +1,808 @@
+<title>人生重演 · Life Replay</title>
+<style>
+  /* 单主题设计：终端屏幕自带黑夜，显式铺满底色，任何宿主主题下都成立 */
+  :root {
+    --bg: #0d1117; --panel: #161b22; --border: #30363d;
+    --text: #c9d1d9; --dim: #8b949e; --accent: #58a6ff;
+    --good: #3fb950; --warn: #d29922; --bad: #f85149;
+  }
+  * { box-sizing: border-box; }
+  html, body { background: var(--bg); }
+  body {
+    margin: 0; color: var(--text);
+    font-family: "SF Mono", "Cascadia Mono", Consolas, "Noto Sans Mono CJK SC",
+                 "Sarasa Mono SC", "Microsoft YaHei", monospace;
+    font-size: 15px; line-height: 1.75;
+  }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 28px 16px 80px; }
+  h1 {
+    font-size: 22px; color: var(--accent); margin: 8px 0 2px;
+    letter-spacing: .06em;
+  }
+  h1 .cursor { display: inline-block; width: .55em; background: var(--accent);
+    animation: blink 1.1s steps(1) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+  @media (prefers-reduced-motion: reduce) {
+    h1 .cursor { animation: none; }
+    .bar-fill { transition: none !important; }
+  }
+  .sub { color: var(--dim); margin-bottom: 6px; font-size: 13px; }
+  .privacy { color: var(--good); font-size: 12px; margin-bottom: 22px; }
+  .panel {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 8px; padding: 16px; margin-bottom: 20px;
+  }
+  .panel h2 {
+    font-size: 15px; margin: 0 0 10px; color: var(--accent);
+    border-bottom: 1px solid var(--border); padding-bottom: 8px;
+  }
+  textarea {
+    width: 100%; min-height: 220px; resize: vertical;
+    background: var(--bg); color: var(--text);
+    border: 1px solid var(--border); border-radius: 6px;
+    padding: 12px; font: inherit; line-height: 1.75;
+  }
+  textarea:focus, input:focus, select:focus, button:focus-visible {
+    outline: 2px solid var(--accent); outline-offset: 1px; border-color: var(--accent);
+  }
+  .row { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 12px; align-items: center; }
+  input, select {
+    background: var(--bg); color: var(--text);
+    border: 1px solid var(--border); border-radius: 6px;
+    padding: 7px 10px; font: inherit; width: 110px;
+  }
+  button {
+    background: #1f6feb; color: #fff; border: none; border-radius: 6px;
+    padding: 9px 18px; font: inherit; cursor: pointer;
+  }
+  button:hover { background: #388bfd; }
+  button:disabled { background: var(--border); color: var(--dim); cursor: wait; }
+  button.ghost { background: transparent; border: 1px solid var(--border); color: var(--text); }
+  button.ghost:hover { border-color: var(--accent); color: var(--accent); }
+  .hint { color: var(--dim); font-size: 13px; }
+  .bar-row { display: flex; align-items: center; gap: 10px; margin: 4px 0; }
+  .bar-label { width: 5.5em; color: var(--dim); flex: none; }
+  .bar-track {
+    flex: 1; height: 12px; background: var(--bg);
+    border: 1px solid var(--border); border-radius: 6px; overflow: hidden;
+  }
+  .bar-fill { height: 100%; background: var(--accent); transition: width .6s; }
+  .bar-num { width: 2.5em; text-align: right; flex: none;
+    font-variant-numeric: tabular-nums; }
+  .evidence { color: var(--dim); font-size: 13px; margin: 2px 0 10px 5.5em; }
+  .evidence em { color: var(--warn); font-style: normal; }
+  .tag {
+    display: inline-block; border: 1px solid var(--border); border-radius: 20px;
+    padding: 1px 12px; margin: 2px 6px 2px 0; font-size: 13px; color: var(--dim);
+    background: var(--panel);
+  }
+  .tag b { color: var(--text); font-weight: normal; }
+  #timeline { white-space: pre-wrap; overflow-x: auto; }
+  .year-age { color: var(--accent); font-variant-numeric: tabular-nums; }
+  .turning { color: var(--warn); }
+  .death { color: var(--bad); }
+  .summary-line { color: var(--good); }
+  .error { color: var(--bad); margin-top: 10px; }
+  .conf-note { margin-top: 10px; padding: 10px; border-left: 3px solid var(--warn);
+               background: var(--bg); font-size: 13px; color: var(--dim); }
+  footer { color: var(--dim); font-size: 12px; margin-top: 40px; text-align: center; }
+</style>
+
+<div class="wrap">
+  <h1>人生重演 · Life Replay<span class="cursor">&nbsp;</span></h1>
+  <div class="sub">写下你的人生经历 → 心理学侧写 → 一场符合逻辑的人生模拟。写得越详细，就越像你。</div>
+  <div class="privacy">✓ 单机版：一切计算都在你的浏览器里完成，你写下的故事不会被上传到任何服务器。</div>
+
+  <div class="panel">
+    <h2>① 写下你的经历</h2>
+    <textarea id="story" placeholder="用自己的话，讲讲你的人生。
+
+比如：出生年份/年龄、家乡和家庭、上学时是什么样的人、印象最深的几件事、
+现在做什么工作、感情经历、让你焦虑或快乐的事情、习惯和爱好……
+
+写得越具体（时间、地点、细节、感受），侧写引擎就越了解你，
+模拟出的人生轨迹也越贴近你本人的性格逻辑。"></textarea>
+    <div class="row">
+      <label class="hint">年龄 <input id="age" type="number" min="5" max="100" placeholder="选填"></label>
+      <label class="hint">性别
+        <select id="gender">
+          <option value="">自动识别</option>
+          <option value="male">男</option>
+          <option value="female">女</option>
+        </select>
+      </label>
+      <span class="hint" id="charCount">0 字</span>
+    </div>
+    <div class="row">
+      <button id="btnProfile">生成人物侧写</button>
+      <button id="btnSim">开始人生模拟 ▶</button>
+      <button id="btnReplay" class="ghost" style="display:none">换一个平行世界重演</button>
+    </div>
+    <div id="err" class="error"></div>
+  </div>
+
+  <div class="panel" id="profilePanel" style="display:none">
+    <h2>② 人物侧写</h2>
+    <div id="profileBody"></div>
+  </div>
+
+  <div class="panel" id="simPanel" style="display:none">
+    <h2>③ 人生模拟</h2>
+    <div id="simMeta" class="hint" style="margin-bottom:10px"></div>
+    <div id="timeline"></div>
+    <div id="summary" style="margin-top:16px"></div>
+  </div>
+
+  <footer>人生重演 Life Replay · 单机版 v0.1 · 侧写基于大五人格 / Schwartz 价值观 / 成人依恋理论</footer>
+</div>
+
+<script>
+"use strict";
+/* ============================================================
+ * 人生重演 · 单机版 —— Python 引擎的完整 JS 移植
+ * 与服务器版逻辑一致：词典侧写 → 人格调制的逐年模拟
+ * ============================================================ */
+
+/* ---------- 可复现随机数：cyrb128 字符串哈希 + sfc32 PRNG ---------- */
+function cyrb128(str) {
+  let h1 = 1779033703, h2 = 3144134277, h3 = 1013904242, h4 = 2773480762;
+  for (let i = 0, k; i < str.length; i++) {
+    k = str.charCodeAt(i);
+    h1 = h2 ^ Math.imul(h1 ^ k, 597399067);
+    h2 = h3 ^ Math.imul(h2 ^ k, 2869860233);
+    h3 = h4 ^ Math.imul(h3 ^ k, 951274213);
+    h4 = h1 ^ Math.imul(h4 ^ k, 2716044179);
+  }
+  h1 = Math.imul(h3 ^ (h1 >>> 18), 597399067);
+  h2 = Math.imul(h4 ^ (h2 >>> 22), 2869860233);
+  h3 = Math.imul(h1 ^ (h3 >>> 17), 951274213);
+  h4 = Math.imul(h2 ^ (h4 >>> 19), 2716044179);
+  return [(h1 ^ h2 ^ h3 ^ h4) >>> 0, (h2 ^ h1) >>> 0, (h3 ^ h1) >>> 0, (h4 ^ h1) >>> 0];
+}
+function sfc32(a, b, c, d) {
+  return function () {
+    a >>>= 0; b >>>= 0; c >>>= 0; d >>>= 0;
+    let t = (a + b) | 0;
+    a = b ^ (b >>> 9);
+    b = (c + (c << 3)) | 0;
+    c = (c << 21) | (c >>> 11);
+    d = (d + 1) | 0;
+    t = (t + d) | 0;
+    c = (c + t) | 0;
+    return (t >>> 0) / 4294967296;
+  };
+}
+function makeRng(seedText, offset) {
+  const s = cyrb128(seedText + "#" + offset);
+  const rng = sfc32(s[0], s[1], s[2], s[3]);
+  for (let i = 0; i < 12; i++) rng();
+  return rng;
+}
+
+/* ---------------- 心理学词典（与 engine/lexicon.py 同步） ---------------- */
+const OPENNESS = {"好奇":2,"想象":1.5,"创作":2,"画画":1.5,"艺术":2,"音乐":1,"乐器":1.5,"写作":1.5,"写小说":2,"诗":1.5,"旅行":1.5,"旅游":1,"探索":2,"新鲜":1.5,"哲学":2.5,"读书":1.5,"看书":1.2,"自学":2,"尝试":1.2,"创新":2,"设计":1.5,"科幻":1.8,"摄影":1.5,"折腾":1.5,"跨专业":2,"转行":1.5,"换城市":1.5,"留学":1.5,"gap":1.5,"间隔年":2,"冷门":1.5,"小众":1.5,"脑洞":1.8,"研究":1.2,"博物馆":1.5,"按部就班":-2,"不喜欢变化":-2.5,"老一套":-1.5,"安稳":-1.5,"循规蹈矩":-2,"没什么爱好":-1.5,"随大流":-1.5,"老家":-0.5};
+const CONSCIENTIOUSNESS = {"自律":2.5,"坚持":2,"计划":1.8,"认真":1.5,"努力":1.5,"按时":1.5,"负责":1.8,"目标":1.5,"完成":1,"刻苦":2,"严谨":2,"整理":1.2,"打卡":1.5,"复习":1.2,"预习":1.5,"早起":1.5,"健身":1.5,"跑步":1.2,"存钱":1.5,"攒钱":1.5,"学霸":2,"第一名":1.5,"奖学金":1.8,"考证":1.5,"备考":1.2,"从不迟到":2.5,"提前":1.2,"清单":1.5,"规划":1.8,"拖延":-2.5,"懒":-2,"三分钟热度":-2.5,"半途而废":-2.5,"迟到":-1.5,"熬夜":-1,"放弃":-1.2,"散漫":-2,"沉迷":-1.8,"逃课":-1.8,"挂科":-1.8,"月光":-1.5,"冲动消费":-1.8,"摆烂":-2.2,"咕咕":-1.5,"鸽":-1};
+const EXTRAVERSION = {"朋友很多":2.5,"聚会":1.8,"社交":1.5,"外向":2.5,"活跃":1.5,"演讲":1.8,"主持":2,"组织":1.5,"热闹":1.5,"认识新朋友":2.2,"社团":1.5,"班长":1.8,"学生会":1.5,"团建":1,"自来熟":2.5,"话多":1.8,"开朗":2,"人缘":1.8,"唱歌":1,"夜店":1.8,"酒局":1.2,"饭局":1,"带队":1.5,"领导力":1.5,"内向":-2.5,"独处":-2,"安静":-1.5,"一个人":-1.2,"宅":-2,"不爱说话":-2.2,"害羞":-2,"社恐":-2.5,"不合群":-1.8,"朋友不多":-1.8,"独来独往":-2.2,"闷":-1.5};
+const AGREEABLENESS = {"帮助":1.8,"照顾":1.8,"体贴":2,"善良":2,"信任":1.5,"合作":1.2,"谦让":2,"志愿":1.8,"同情":1.8,"陪伴":1.5,"心软":2,"老好人":2.2,"为别人着想":2.5,"不好意思拒绝":1.8,"让着":1.5,"包容":1.8,"原谅":1.5,"捐":1.5,"争吵":-1.5,"吵架":-1.5,"打架":-2,"怼":-1.8,"冷漠":-2,"计较":-1.8,"报复":-2.5,"讨厌别人":-2,"看不惯":-1.2,"怼人":-2,"杠":-1.8,"不信任":-1.8,"利用":-1.5,"撕破脸":-2};
+const NEUROTICISM = {"焦虑":2.5,"抑郁":2.5,"失眠":2,"压力":1.5,"崩溃":2.2,"害怕":1.5,"担心":1.5,"自卑":2.2,"敏感":1.8,"哭":1.5,"恐惧":1.8,"emo":1.8,"内耗":2.5,"紧张":1.5,"玻璃心":2,"想太多":2,"患得患失":2.2,"情绪化":2,"钻牛角尖":2,"睡不着":1.8,"胡思乱想":2,"委屈":1.5,"绝望":2.2,"乐观":-2.2,"平静":-1.8,"淡定":-2,"想得开":-2.2,"心态好":-2.5,"不在乎":-1.5,"放松":-1.2,"没心没肺":-2,"大大咧咧":-1.8,"钝感":-2,"看得开":-2};
+const BIG_FIVE = {openness: OPENNESS, conscientiousness: CONSCIENTIOUSNESS, extraversion: EXTRAVERSION, agreeableness: AGREEABLENESS, neuroticism: NEUROTICISM};
+const BIG_FIVE_NAMES = {openness: "开放性", conscientiousness: "尽责性", extraversion: "外向性", agreeableness: "宜人性", neuroticism: "神经质"};
+
+const VALUES = {
+  achievement: {"成功":2,"出人头地":2.5,"赚钱":1.8,"赚大钱":2.2,"名校":1.8,"第一":1.5,"排名":1.5,"竞争":1.5,"野心":2.2,"事业":1.5,"晋升":1.8,"升职":1.8,"证明自己":2.2,"优秀":1.5,"赢":1.5},
+  security: {"稳定":2.2,"编制":2.5,"安稳":2.2,"铁饭碗":2.5,"公务员":2,"国企":1.8,"体制内":2.2,"保险":1.2,"存款":1.5,"房子":1.2,"落户":1.5,"养老":1.5,"不想冒险":2.5},
+  hedonism: {"玩":1.2,"游戏":1.2,"美食":1.5,"吃喝":1.5,"享受":2,"躺平":1.8,"舒服":1.5,"及时行乐":2.5,"开心就好":2.2,"追剧":1.2,"度假":1.5},
+  benevolence: {"帮助别人":2.5,"公益":2.2,"志愿者":2.2,"家人":1.5,"父母":1,"回报":1.5,"照顾家里":2,"教书":1.5,"医生":1.2,"救":1.8,"支教":2.5},
+  self_direction: {"自由":2.2,"独立":2,"自己决定":2.5,"不想被管":2.5,"辞职":1.5,"创业":1.8,"数字游民":2.5,"自由职业":2.2,"远程":1.5,"间隔年":2,"背包":1.8},
+};
+const VALUE_NAMES = {achievement: "成就", security: "安全", hedonism: "享乐", benevolence: "利他", self_direction: "自主"};
+
+const ATTACHMENT = {
+  anxious: {"缺乏安全感":2.5,"害怕被抛弃":3,"患得患失":2.5,"粘人":2.2,"查手机":2,"秒回":1.5,"作":1.2,"害怕分手":2.2,"离不开":1.8,"反复确认":2.2},
+  avoidant: {"保持距离":2.5,"不习惯亲密":2.8,"一个人也挺好":2.2,"不敢开始":2,"推开":2,"不依赖":1.8,"不谈感情":2,"母胎单身":1.2,"不相信爱情":2.2,"冷战":1.5},
+  secure: {"信任对方":2.5,"安全感":1.5,"沟通":1.8,"互相支持":2.5,"感情稳定":2.5,"很幸福":2,"彼此独立":2},
+};
+const ATTACHMENT_NAMES = {secure: "安全型", anxious: "焦虑型", avoidant: "回避型"};
+
+const FACT_PATTERNS = {
+  education: ["小学","初中","高中","中考","高考","大学","本科","专科","大专","硕士","研究生","博士","考研","留学","退学","辍学","毕业","专业"],
+  career: ["工作","上班","入职","离职","辞职","跳槽","创业","失业","裁员","升职","加薪","实习","公司","打工","面试","offer","外包","带团队"],
+  romance: ["恋爱","女朋友","男朋友","女友","男友","结婚","离婚","分手","相亲","暗恋","表白","伴侣","老婆","妻子","丈夫","老公","对象","订婚","异地恋"],
+  family: ["父母","离异","单亲","兄弟","姐妹","独生","爷爷","奶奶","外婆","外公","孩子","女儿","儿子","去世","重男轻女"],
+  health: ["生病","住院","手术","抑郁症","焦虑症","失眠","受伤","车祸","慢性","确诊","康复"],
+  finance: ["贷款","房贷","车贷","买房","买车","存款","负债","欠钱","工资","月薪","年薪","破产","股票","基金"],
+};
+const FACT_NAMES = {education: "教育", career: "职业", romance: "感情", family: "家庭", health: "健康", finance: "经济"};
+
+/* ---------------- 侧写引擎（与 engine/profiler.py 同步） ---------------- */
+function splitSentences(text) {
+  return text.split(/[。！？!?\n;；]+/).map(s => s.trim()).filter(Boolean);
+}
+function countOccurrences(haystack, needle) {
+  if (!needle) return 0;
+  let count = 0, pos = 0;
+  while ((pos = haystack.indexOf(needle, pos)) !== -1) { count++; pos += needle.length; }
+  return count;
+}
+function scan(text, sentences, table) {
+  const lowered = text.toLowerCase();
+  let score = 0;
+  const evidence = [];
+  for (const [keyword, weight] of Object.entries(table)) {
+    const count = countOccurrences(lowered, keyword.toLowerCase());
+    if (count <= 0) continue;
+    score += weight * Math.sqrt(count);
+    let source = "";
+    for (const sent of sentences) {
+      if (sent.toLowerCase().includes(keyword.toLowerCase())) { source = sent.slice(0, 60); break; }
+    }
+    evidence.push({keyword, weight: Math.round(weight * 100) / 100, count, sentence: source});
+  }
+  evidence.sort((a, b) => Math.abs(b.weight) * b.count - Math.abs(a.weight) * a.count);
+  return [score, evidence];
+}
+function toScale(raw, textLen) {
+  const squashed = Math.tanh(raw / 8);
+  const reliability = Math.pow(Math.min(1, textLen / 200), 0.5);
+  return Math.round(50 + squashed * 45 * reliability);
+}
+const EDU_RANK = [["博士",5],["硕士",4],["研究生",4],["考研",4],["本科",3],["大学",3],["留学",3],["大专",2],["专科",2],["高中",1],["辍学",0],["退学",0]];
+const GENDER_HINTS = [
+  [/我是?(?:一个|个)?(男生|男孩|男人|小伙|儿子)/, "male"],
+  [/我是?(?:一个|个)?(女生|女孩|女人|姑娘|女儿)/, "female"],
+  [/(女朋友|女友|老婆|妻子)/, "male"],
+  [/(男朋友|男友|老公|丈夫)/, "female"],
+];
+
+function buildProfile(text, extra) {
+  extra = extra || {};
+  text = (text || "").trim();
+  const sentences = splitSentences(text);
+  const textLen = text.length;
+  const currentYear = new Date().getFullYear();
+
+  const bigFive = {}, bigFiveEvidence = {};
+  for (const [dim, table] of Object.entries(BIG_FIVE)) {
+    const [raw, evidence] = scan(text, sentences, table);
+    bigFive[dim] = toScale(raw, textLen);
+    bigFiveEvidence[dim] = evidence.slice(0, 6);
+  }
+
+  const valueRaw = {};
+  for (const [key, table] of Object.entries(VALUES)) valueRaw[key] = Math.max(scan(text, sentences, table)[0], 0);
+  const total = Object.values(valueRaw).reduce((a, b) => a + b, 0) || 1;
+  const values = {};
+  for (const [key, raw] of Object.entries(valueRaw)) values[key] = Math.round(100 * raw / total);
+
+  const attachScores = {};
+  for (const [style, table] of Object.entries(ATTACHMENT)) attachScores[style] = scan(text, sentences, table)[0];
+  let bestStyle = Object.keys(attachScores).reduce((a, b) => attachScores[a] >= attachScores[b] ? a : b);
+  if (attachScores[bestStyle] < 1.5) bestStyle = "secure";
+
+  const facts = {};
+  for (const [domain, keywords] of Object.entries(FACT_PATTERNS)) {
+    const hits = [];
+    for (const keyword of keywords) {
+      if (text.includes(keyword)) {
+        for (const sent of sentences) {
+          if (sent.includes(keyword)) {
+            const snippet = sent.slice(0, 80);
+            if (!hits.includes(snippet)) hits.push(snippet);
+            break;
+          }
+        }
+      }
+    }
+    if (hits.length) facts[domain] = hits.slice(0, 8);
+  }
+
+  let age = null, ageSource = null;
+  let m = text.match(/(?:今年|我)\s*(\d{1,2})\s*岁/) || text.match(/(\d{1,2})\s*岁(?:了|的我)/);
+  if (m) { const a = parseInt(m[1], 10); if (a >= 5 && a <= 100) { age = a; ageSource = "文中提到年龄"; } }
+  if (age === null) {
+    m = text.match(/(19[5-9]\d|20[0-2]\d)\s*年\s*(?:出生|生)/) || text.match(/出生于\s*(19[5-9]\d|20[0-2]\d)/) || text.match(/我是\s*(19[5-9]\d|20[0-2]\d)\s*年/);
+    if (m) { const a = currentYear - parseInt(m[1], 10); if (a >= 5 && a <= 100) { age = a; ageSource = "由出生年份推算"; } }
+  }
+  if (extra.age) { age = extra.age; ageSource = "用户填写"; }
+  if (age === null) { age = 25; ageSource = "默认值(文中未提及)"; }
+
+  let gender = extra.gender || null;
+  if (!gender) for (const [pat, g] of GENDER_HINTS) { if (pat.test(text)) { gender = g; break; } }
+
+  let eduLevel = 1;
+  for (const [keyword, rank] of EDU_RANK) { if (text.includes(keyword)) { eduLevel = rank; break; } }
+
+  const numbers = (text.match(/\d+/g) || []).length;
+  const years = (text.match(/(?:19|20)\d{2}/g) || []).length;
+  const markers = ["那年","那天","后来","因为","所以","记得","当时","第一次"].reduce((s, w) => s + countOccurrences(text, w), 0);
+  const detail = Math.round(Math.min(textLen / 800, 1) * 50 + Math.min(numbers / 10, 1) * 20 + Math.min(years / 4, 1) * 15 + Math.min(markers / 8, 1) * 15);
+  const evidenceCount = Object.values(bigFiveEvidence).reduce((s, v) => s + v.length, 0);
+  const confidence = Math.round(detail * 0.6 + Math.min(evidenceCount / 25, 1) * 40);
+
+  return {
+    big_five: bigFive, big_five_names: BIG_FIVE_NAMES, big_five_evidence: bigFiveEvidence,
+    values, value_names: VALUE_NAMES,
+    attachment: bestStyle, attachment_name: ATTACHMENT_NAMES[bestStyle],
+    facts, fact_names: FACT_NAMES,
+    age, age_source: ageSource, gender,
+    education_level: eduLevel,
+    married: ["结婚","老婆","妻子","老公","丈夫"].some(k => text.includes(k)) && !text.includes("离婚"),
+    has_children: ["女儿","儿子","孩子上","我的孩子"].some(k => text.includes(k)),
+    entrepreneur: text.includes("创业"),
+    detail_score: detail, confidence, text_length: textLen,
+  };
+}
+
+/* ------------- 事件语料库（data/events.json 内嵌，41 条种子） ------------- */
+const CORPUS = [
+ {id:"evt_hm_001",text:"深夜加完班走出写字楼，你发现路边摊的烤红薯和二十年前老家门口的一个味道。",domain:"career",min_age:22,max_age:45,weight:1,effects:{happiness:3}},
+ {id:"evt_hm_002",text:"部门空降了一位新领导，把你负责了两年的项目整个推翻重来。",domain:"career",min_age:24,max_age:55,weight:1,effects:{happiness:-4,stress:8}},
+ {id:"evt_hm_003",text:"你带的实习生第一次独立完成任务后，特地跑来向你道谢。你忽然理解了当年前辈看你的眼神。",domain:"career",min_age:26,max_age:55,weight:.8,trait_bias:{A:.4},effects:{happiness:5}},
+ {id:"evt_hm_004",text:"一个猎头突然打来电话，报出的数字让你心跳漏了一拍。你在地铁上想了一路。",domain:"career",min_age:25,max_age:45,weight:1,trait_bias:{O:.3},effects:{stress:3}},
+ {id:"evt_hm_005",text:"年会抽奖你中了最大的奖，同事起哄让你请客，热闹了一整晚。",domain:"career",min_age:22,max_age:60,weight:.6,trait_bias:{E:.3},effects:{happiness:4}},
+ {id:"evt_hm_010",text:"你在老同学的婚礼上被安排在'单身桌'，一桌人尴尬地互相敬酒。",domain:"romance",min_age:24,max_age:40,weight:.8,effects:{happiness:-3}},
+ {id:"evt_hm_011",text:"前任在朋友圈晒出了婚纱照。你盯着看了十秒，点了个赞，又默默取消了。",domain:"romance",min_age:22,max_age:45,weight:.8,trait_bias:{N:.4},effects:{happiness:-4,stress:4}},
+ {id:"evt_hm_012",text:"你和伴侣为了'谁忘了倒垃圾'大吵一架，最后却因为吵得太离谱笑作一团。",domain:"romance",min_age:22,max_age:70,weight:1,effects:{happiness:3,stress:-2}},
+ {id:"evt_hm_013",text:"长辈又一次在饭桌上问起你的感情状况，你笑着扒饭，把话题岔了过去。",domain:"romance",min_age:24,max_age:40,weight:1,effects:{stress:4}},
+ {id:"evt_hm_020",text:"父亲的白头发好像一夜之间多了很多。视频通话里他还是那句'家里都好，别担心'。",domain:"family",min_age:25,max_age:60,weight:1.2,effects:{happiness:-3}},
+ {id:"evt_hm_021",text:"收拾旧物时翻出小学的日记本，里面写着'长大以后一定要……'。你合上本子坐了很久。",domain:"family",min_age:25,max_age:70,weight:.8,trait_bias:{O:.3},effects:{happiness:2}},
+ {id:"evt_hm_022",text:"母亲学会了发语音红包，逢年过节准时发来八块八，附一句'注意身体'。",domain:"family",min_age:22,max_age:60,weight:1,effects:{happiness:4}},
+ {id:"evt_hm_023",text:"家族群里因为一条养生谣言吵了起来，你打了一大段科普又逐字删掉了。",domain:"family",min_age:20,max_age:60,weight:.8,trait_bias:{A:-.3},effects:{stress:2}},
+ {id:"evt_hm_024",text:"孩子第一次开口叫你，你愣了两秒，眼眶一下就热了。",domain:"family",min_age:24,max_age:45,weight:1,effects:{happiness:8}},
+ {id:"evt_hm_030",text:"体检报告上多了两个箭头。你把'规律作息'四个字写进了新年计划——第三次。",domain:"health",min_age:26,max_age:60,weight:1.2,effects:{stress:4}},
+ {id:"evt_hm_031",text:"你连续跑步满一百天，体重没怎么变，但爬六楼不喘了。",domain:"health",min_age:18,max_age:65,weight:.8,trait_bias:{C:.5},effects:{happiness:4,health:3,stress:-3}},
+ {id:"evt_hm_032",text:"一场重感冒把你击倒在出租屋里，你烧得迷迷糊糊，第一次认真想到了'一个人'这件事。",domain:"health",min_age:20,max_age:40,weight:.8,effects:{happiness:-4,health:-2}},
+ {id:"evt_hm_033",text:"你尝试冥想来对抗失眠，结果在第三分钟睡着了。也算成功。",domain:"health",min_age:20,max_age:70,weight:.6,trait_bias:{N:.4},effects:{stress:-4}},
+ {id:"evt_hm_040",text:"房东通知涨租的那天，你打开了买房计算器，按了几下又默默关掉。",domain:"finance",min_age:22,max_age:40,weight:1,effects:{happiness:-3,stress:5}},
+ {id:"evt_hm_041",text:"你尘封多年的旧手办在二手平台意外卖出了高价，够吃一个月的午饭。",domain:"finance",min_age:18,max_age:45,weight:.6,effects:{happiness:3,wealth:5}},
+ {id:"evt_hm_042",text:"你跟风买的基金绿了一整年，你决定把 App 卸载，眼不见心不烦。",domain:"finance",min_age:22,max_age:55,weight:.8,effects:{happiness:-2,wealth:-5}},
+ {id:"evt_hm_043",text:"你第一次认真记账，月底看到'奶茶'分类的总额时沉默了。",domain:"finance",min_age:18,max_age:40,weight:.8,trait_bias:{C:.3},effects:{stress:1}},
+ {id:"evt_hm_050",text:"你报名的线上课程终于学完了最后一节。结业证书是电子的，成就感是真实的。",domain:"growth",min_age:18,max_age:60,weight:.8,trait_bias:{C:.4,O:.3},effects:{happiness:4}},
+ {id:"evt_hm_051",text:"你在书店站着读完了一本书的一半，最后还是把它买了下来——为了另一半。",domain:"growth",min_age:15,max_age:75,weight:.8,trait_bias:{O:.5},effects:{happiness:3}},
+ {id:"evt_hm_052",text:"你心血来潮学做一道硬菜，厨房像被打劫过，但味道意外地不错。",domain:"growth",min_age:18,max_age:70,weight:.8,effects:{happiness:3}},
+ {id:"evt_hm_053",text:"深夜你把学了三个月的吉他弹给自己听，跑调跑得很自由。",domain:"growth",min_age:15,max_age:60,weight:.6,trait_bias:{O:.4},effects:{happiness:3,stress:-2}},
+ {id:"evt_hm_060",text:"多年没联系的好友突然发来消息：'在吗，路过你的城市，见一面？'你们聊到了打烊。",domain:"social",min_age:20,max_age:70,weight:1,trait_bias:{E:.3},effects:{happiness:5}},
+ {id:"evt_hm_061",text:"你被拉进了第七个工作群。你把手机调成静音，世界清净了三分钟。",domain:"social",min_age:22,max_age:55,weight:.8,trait_bias:{E:-.4},effects:{stress:3}},
+ {id:"evt_hm_062",text:"小区楼下的流浪猫开始蹭你的裤脚。你顺手买了猫粮，从此多了一份'责任'。",domain:"social",min_age:15,max_age:80,weight:.8,trait_bias:{A:.4},effects:{happiness:4}},
+ {id:"evt_hm_063",text:"你鼓起勇气参加了一场陌生人饭局，全程话不多，但回家路上觉得没那么孤单了。",domain:"social",min_age:18,max_age:50,weight:.6,trait_bias:{E:-.3},effects:{happiness:3}},
+ {id:"evt_hm_070",text:"你在阳台种的小番茄结果了，一共三颗。你郑重其事地拍照留念。",domain:"misc",min_age:18,max_age:90,weight:.8,effects:{happiness:3}},
+ {id:"evt_hm_071",text:"台风夜停电，你点着手机手电筒吃泡面，忽然觉得这一刻也挺浪漫。",domain:"misc",min_age:15,max_age:80,weight:.6,effects:{happiness:2}},
+ {id:"evt_hm_072",text:"你错过了末班车，步行四十分钟回家，路上把这几年的事想了一遍。",domain:"misc",min_age:18,max_age:60,weight:.8,effects:{stress:-2}},
+ {id:"evt_hm_073",text:"手机相册自动生成了'五年前的今天'。你看着照片里的自己，一时说不清是怀念还是感慨。",domain:"misc",min_age:22,max_age:80,weight:.8,effects:{happiness:1}},
+ {id:"evt_hm_074",text:"你在旧衣服口袋里摸出一张没刮的彩票。刮开：谢谢惠顾。你笑了一下，扔进了垃圾桶。",domain:"misc",min_age:18,max_age:80,weight:.6},
+ {id:"evt_hm_080",text:"凌晨三点你还清醒着，给自己列了一张'三十岁之前要做的事'清单，然后安心睡去。",domain:"growth",min_age:20,max_age:29,weight:.8,trait_bias:{C:.3,N:.2},effects:{stress:-2}},
+ {id:"evt_hm_081",text:"你参加了人生第一场马拉松，在最后一公里几乎是走过终点的，但奖牌货真价实。",domain:"health",min_age:18,max_age:55,weight:.6,trait_bias:{C:.4,E:.2},effects:{happiness:6,health:2}},
+ {id:"evt_hm_082",text:"退休后的第一个工作日早晨，你习惯性地七点醒来，然后想起不用上班，又幸福地睡了回去。",domain:"career",min_age:60,max_age:75,weight:1,effects:{happiness:5,stress:-5}},
+ {id:"evt_hm_083",text:"你开始教社区的老人用智能手机，他们叫你'小老师'，虽然你也不年轻了。",domain:"social",min_age:45,max_age:80,weight:.8,trait_bias:{A:.4},effects:{happiness:5}},
+ {id:"evt_hm_084",text:"孙辈拿着作业来问你问题，你偷偷在另一个房间搜索了答案，保住了长辈的威严。",domain:"family",min_age:55,max_age:90,weight:.8,effects:{happiness:5}},
+ {id:"evt_hm_085",text:"高中晚自习停电的那晚，整栋楼的人在黑暗里欢呼。多年后你还会想起那片星星点点的手机光。",domain:"growth",min_age:15,max_age:19,weight:.8,effects:{happiness:4}},
+].sort((a, b) => a.id < b.id ? -1 : 1);
+
+function drawEvent(rng, age, traits) {
+  const candidates = [], weights = [];
+  for (const ev of CORPUS) {
+    if (!(ev.min_age <= age && age <= ev.max_age)) continue;
+    let w = ev.weight || 1;
+    for (const [key, bias] of Object.entries(ev.trait_bias || {})) {
+      w *= Math.max(0.05, 1 + (traits[key] - 50) / 50 * bias);
+    }
+    candidates.push(ev); weights.push(w);
+  }
+  if (!candidates.length) return null;
+  const total = weights.reduce((a, b) => a + b, 0);
+  let r = rng() * total;
+  for (let i = 0; i < candidates.length; i++) {
+    r -= weights[i];
+    if (r <= 0) return candidates[i];
+  }
+  return candidates[candidates.length - 1];
+}
+
+/* ------------- 人生模拟引擎（与 engine/simulation.py 同步） ------------- */
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+const traitFactor = (score, strength) => Math.max(0.1, 1 + (score - 50) / 10 * strength);
+
+function simulate(profile, seedText, seedOffset) {
+  const rng = makeRng(seedText, seedOffset);
+  const choose = p => rng() < p;
+  const startYear = new Date().getFullYear();
+  const b5 = profile.big_five;
+  const O = b5.openness, C = b5.conscientiousness, E = b5.extraversion,
+        A = b5.agreeableness, N = b5.neuroticism;
+  const values = profile.values, attachment = profile.attachment;
+  const traits = {O, C, E, A, N};
+
+  const s = {
+    age: profile.age, alive: true, deathCause: null,
+    education: profile.education_level,
+    married: profile.married, children: profile.has_children ? 1 : 0,
+    happiness: 60, burnout: 0,
+  };
+  s.inSchool = s.age < 16 + Math.max(s.education, 1) * 2 && s.age < 28;
+  s.career = s.inSchool ? "student" : (profile.entrepreneur ? "entrepreneur" : "employed");
+  s.jobLevel = clamp(Math.floor((s.age - 22) / 5), 0, 3);
+  s.income = s.inSchool ? 0 : 60 + s.education * 25 + s.jobLevel * 40;
+  s.wealth = Math.max(0, (s.age - 22) * 15);
+  s.inRelationship = s.married;
+  s.health = clamp(95 - Math.max(0, s.age - 30), 40, 100);
+  s.stress = 30 + Math.floor(Math.max(0, N - 50) / 2);
+  s.ownsHome = s.age > 32 && (values.security || 0) > 20;
+
+  const timeline = [], turningPoints = [];
+  function log(year, text, turning) {
+    if (!timeline.length || timeline[timeline.length - 1].age !== s.age) {
+      timeline.push({year, age: s.age, events: []});
+    }
+    timeline[timeline.length - 1].events.push(text);
+    if (turning) turningPoints.push(s.age + "岁：" + text);
+  }
+
+  let year = startYear;
+  while (s.alive && s.age < 100 && year - startYear < 100) {
+    stepYear(year);
+    year++; s.age++;
+  }
+
+  function stepYear(year) {
+    tickHealth(year);
+    if (!s.alive) return;
+    if (s.inSchool) tickSchool(year);
+    else if (s.career !== "retired") tickCareer(year);
+    tickRelationships(year);
+    tickFinance(year);
+    tickWellbeing(year);
+    tickRandom(year);
+  }
+
+  function tickHealth(year) {
+    const baseDecline = s.age < 40 ? 0.3 : (s.age - 30) * 0.06;
+    let decline = baseDecline * traitFactor(100 - C, 0.06) * traitFactor(N, 0.04);
+    decline += s.stress * 0.01;
+    s.health = clamp(s.health - decline, 0, 100);
+    let pDeath = 0.0003 * Math.pow(1.10, Math.max(0, s.age - 30));
+    pDeath *= (1.6 - s.health / 100);
+    if (choose(pDeath)) {
+      s.alive = false;
+      s.deathCause = s.age > 55 ? "疾病" : "意外";
+      log(year, "生命走到了终点（" + s.deathCause + "）。", true);
+      return;
+    }
+    if (s.health < 35 && choose(0.25)) {
+      log(year, "一场大病让你住院了。长期透支的身体发出了警告。", true);
+      s.health = clamp(s.health + 10, 0, 100);
+      s.stress = clamp(s.stress - 10, 0, 100);
+      if (s.career === "employed" && choose(0.3)) log(year, "病后你开始重新审视工作与生活的平衡。");
+    }
+  }
+
+  function tickSchool(year) {
+    const gradAge = 16 + Math.max(s.education, 1) * 2;
+    if (s.age >= gradAge || s.age >= 28) {
+      s.inSchool = false; s.career = "employed"; s.jobLevel = 0;
+      s.income = 60 + s.education * 25;
+      log(year, "你完成了学业，正式步入社会。", true);
+      if (s.education === 3 && s.age < 24) {
+        const pGrad = 0.15 * traitFactor(C, 0.15) * traitFactor(O, 0.10) * (1 + (values.achievement || 0) / 60);
+        if (choose(pGrad)) {
+          s.education = 4; s.inSchool = true; s.career = "student"; s.income = 0;
+          log(year, "凭着高尽责性(" + C + ")和对深造的执念，你决定继续读研。", true);
+        }
+      }
+    } else if (choose(0.3 * traitFactor(O, 0.1))) {
+      log(year, "校园里的一年：你在课业之外探索着自己的兴趣。");
+    }
+  }
+
+  function tickCareer(year) {
+    if (s.age >= 62 && s.career !== "retired") {
+      s.career = "retired";
+      log(year, "你退休了，开始了人生的新阶段。", true);
+      return;
+    }
+    if (s.career === "employed") {
+      const pPromo = 0.12 * traitFactor(C, 0.15) * traitFactor(E, 0.06);
+      if (s.jobLevel < 5 && choose(pPromo)) {
+        s.jobLevel++; s.income = Math.floor(s.income * 1.3);
+        log(year, "你升职了（第" + s.jobLevel + "级）。多年的" + (C >= 50 ? "踏实尽责" : "临场发挥") + "让上级看到了你。");
+        s.happiness = clamp(s.happiness + 5, 0, 100);
+      }
+      if (choose(0.03 * traitFactor(100 - C, 0.08))) {
+        s.career = "unemployed";
+        log(year, "行业波动，你被裁员了。", true);
+        s.stress = clamp(s.stress + 20, 0, 100);
+        return;
+      }
+      let pSwitch = 0.06 * traitFactor(O, 0.15) * (1 + (values.self_direction || 0) / 80);
+      if (s.stress > 60) pSwitch *= 1.6;
+      if (choose(pSwitch)) {
+        if (choose(0.3 * traitFactor(O, 0.2))) {
+          log(year, "高开放性(" + O + ")让你做出了旁人意外的决定：转行进入一个全新领域。", true);
+          s.income = Math.floor(s.income * 0.85);
+          s.jobLevel = Math.max(0, s.jobLevel - 1);
+        } else {
+          s.income = Math.floor(s.income * 1.15);
+          log(year, "你跳槽到了一家新公司，薪资上了一个台阶。");
+        }
+        s.stress = clamp(s.stress - 15, 0, 100);
+      }
+      const pStartup = 0.015 * traitFactor(O, 0.12) * traitFactor(E, 0.08)
+        * (1 + (values.self_direction || 0) / 60) / (1 + (values.security || 0) / 50);
+      if (s.wealth > 100 && s.age < 45 && choose(pStartup)) {
+        s.career = "entrepreneur"; s.income = Math.floor(s.income * 0.5);
+        log(year, "你辞职创业了。对自主的渴望压过了对安稳的留恋。", true);
+      }
+    } else if (s.career === "unemployed") {
+      if (choose(0.55 * traitFactor(C, 0.08) * traitFactor(E, 0.08))) {
+        s.career = "employed"; s.income = Math.floor(Math.max(s.income * 0.9, 50));
+        log(year, "经过一段低谷，你找到了新工作。");
+        s.stress = clamp(s.stress - 15, 0, 100);
+      } else {
+        log(year, "求职的一年并不顺利，积蓄在慢慢消耗。");
+        s.wealth = Math.max(0, s.wealth - 30);
+        s.stress = clamp(s.stress + 10, 0, 100);
+      }
+    } else if (s.career === "entrepreneur") {
+      const roll = rng();
+      const grind = traitFactor(C, 0.10);
+      if (roll < 0.12 * grind) {
+        s.income = Math.floor(s.income * 2.2);
+        log(year, "创业迎来爆发的一年，业务翻了一番还多。", true);
+        s.happiness = clamp(s.happiness + 8, 0, 100);
+      } else if (roll > 0.88 / grind) {
+        log(year, "创业失败了。你关掉了公司，回到职场。", true);
+        s.career = "employed"; s.income = 80 + s.education * 20;
+        s.wealth = Math.max(0, s.wealth - 80);
+        s.stress = clamp(s.stress + 15, 0, 100);
+      } else {
+        s.income = Math.floor(s.income * (0.95 + rng() * 0.25));
+        log(year, "创业维艰的一年，起起伏伏但还撑着。");
+        s.stress = clamp(s.stress + 5, 0, 100);
+      }
+    }
+  }
+
+  function tickRelationships(year) {
+    if (!s.inRelationship && s.age >= 18 && s.age <= 70) {
+      const peak = Math.max(0, 1 - Math.abs(s.age - 29) / 20);
+      let pMeet = 0.18 * peak * traitFactor(E, 0.10);
+      if (attachment === "avoidant") pMeet *= 0.55;
+      if (choose(pMeet)) {
+        s.inRelationship = true;
+        log(year, "你在" + (E >= 50 ? "朋友聚会上" : "一个共同的小圈子里") + "遇到了让你心动的人，开始了一段感情。");
+        s.happiness = clamp(s.happiness + 8, 0, 100);
+      }
+    } else if (s.inRelationship && !s.married) {
+      let pBreak = 0.15 * traitFactor(N, 0.08) / traitFactor(A, 0.06);
+      if (attachment === "anxious") pBreak *= 1.5;
+      else if (attachment === "secure") pBreak *= 0.6;
+      if (choose(pBreak)) {
+        s.inRelationship = false;
+        const reason = {anxious: "反复的患得患失最终耗尽了两个人",
+                        avoidant: "你始终没能真正敞开自己",
+                        secure: "你们和平地发现彼此并不合适"}[attachment];
+        log(year, "这段感情结束了——" + reason + "。");
+        s.happiness = clamp(s.happiness - 10, 0, 100);
+        s.stress = clamp(s.stress + 8, 0, 100);
+      } else {
+        let pMarry = (s.age >= 24 && s.age <= 38) ? 0.30 : 0.12;
+        pMarry *= traitFactor(A, 0.05);
+        if (attachment === "secure") pMarry *= 1.3;
+        if (choose(pMarry)) {
+          s.married = true;
+          log(year, "你们结婚了。", true);
+          s.happiness = clamp(s.happiness + 12, 0, 100);
+        }
+      }
+    } else if (s.married) {
+      let pDiv = 0.02 * traitFactor(N, 0.10) / traitFactor(A, 0.08);
+      if (attachment !== "secure") pDiv *= 1.4;
+      if (s.stress > 70) pDiv *= 1.5;
+      if (choose(pDiv)) {
+        s.married = false; s.inRelationship = false;
+        log(year, "婚姻走到了尽头，你们离婚了。", true);
+        s.happiness = clamp(s.happiness - 15, 0, 100);
+        s.wealth = Math.floor(s.wealth * 0.6);
+        return;
+      }
+      if (s.children < 3 && s.age >= 22 && s.age <= 42) {
+        const pChild = 0.22 / (1 + s.children) * (1 + (values.benevolence || 0) / 80);
+        if (choose(pChild)) {
+          s.children++;
+          log(year, "你们的第" + s.children + "个孩子出生了。", true);
+          s.happiness = clamp(s.happiness + 8, 0, 100);
+          s.stress = clamp(s.stress + 8, 0, 100);
+        }
+      }
+    }
+  }
+
+  function tickFinance(year) {
+    if (s.career === "retired") {
+      const pension = Math.floor(s.income * 0.5);
+      s.wealth = Math.max(0, s.wealth + pension - (40 + s.children * 2));
+      return;
+    }
+    let saveRate = 0.15 * traitFactor(C, 0.12);
+    if ((values.hedonism || 0) > 30) saveRate *= 0.6;
+    const spend = 40 + s.children * 15 + (s.ownsHome ? 20 : 30);
+    s.wealth = Math.max(0, s.wealth + Math.floor(s.income * saveRate) - Math.max(0, spend - s.income));
+    if (!s.ownsHome && s.wealth > 250 && (values.security || 0) > 15 && choose(0.35)) {
+      s.ownsHome = true;
+      s.wealth = Math.floor(s.wealth * 0.35);
+      log(year, "你掏空积蓄付了首付，买下了自己的房子。对安稳的看重让你觉得值得。", true);
+      s.happiness = clamp(s.happiness + 6, 0, 100);
+    }
+  }
+
+  function tickWellbeing(year) {
+    let base = 50;
+    base += (s.health - 60) * 0.15;
+    base += s.married ? 10 : (s.inRelationship ? 4 : -2);
+    base += Math.min(s.children, 2) * 2;
+    base += (s.income - 100) * 0.03;
+    base += s.ownsHome ? 6 : 0;
+    base -= s.stress * 0.15;
+    base -= (N - 50) * 0.20;
+    base += (E - 50) * 0.10;
+    if ((values.achievement || 0) > 30 && s.income < 200) base -= 5;
+    s.happiness = clamp(Math.floor(s.happiness * 0.6 + base * 0.4), 0, 100);
+    s.stress = clamp(s.stress - 5 - Math.floor((C - 50) / 10), 0, 100);
+    if ((s.career === "employed" || s.career === "entrepreneur") && s.jobLevel >= 3) {
+      s.stress = clamp(s.stress + 5, 0, 100);
+    }
+    if (N > 62 && s.stress > 55 && s.happiness < 40) {
+      s.burnout++;
+      if (s.burnout >= 2 && choose(0.4)) {
+        log(year, "长期内耗之后，你陷入了一段严重的情绪低谷，开始寻求心理咨询。", true);
+        s.stress = clamp(s.stress - 25, 0, 100);
+        s.burnout = 0;
+      }
+    } else s.burnout = 0;
+    if ((s.age === 40 || s.age === 45) && O > 60 && s.happiness < 55) {
+      log(year, "站在人生中场，你认真问自己：现在的生活是我想要的吗？");
+    }
+  }
+
+  function tickRandom(year) {
+    if (choose(0.30)) {
+      const ev = drawEvent(rng, s.age, traits);
+      if (ev) {
+        log(year, ev.text);
+        const fx = ev.effects || {};
+        s.happiness = clamp(s.happiness + (fx.happiness || 0), 0, 100);
+        s.stress = clamp(s.stress + (fx.stress || 0), 0, 100);
+        s.health = clamp(s.health + (fx.health || 0), 0, 100);
+        s.wealth = Math.max(0, s.wealth + (fx.wealth || 0));
+        return;
+      }
+    }
+    const roll = rng();
+    if (roll < 0.02 * traitFactor(E, 0.1)) {
+      log(year, "一位老朋友重新回到你的生活里，你们聊了整晚。");
+      s.happiness = clamp(s.happiness + 4, 0, 100);
+    } else if (roll > 0.985) {
+      log(year, "家中长辈离世，你回了一趟老家，想了很多。");
+      s.happiness = clamp(s.happiness - 6, 0, 100);
+    } else if (roll > 0.5 && roll < 0.52 && O > 55) {
+      log(year, "你捡起了一个搁置多年的爱好，久违地感到纯粹的快乐。");
+      s.happiness = clamp(s.happiness + 5, 0, 100);
+    }
+  }
+
+  return {
+    final_age: s.age, alive: s.alive, death_cause: s.deathCause,
+    career_final: {student: "学生", employed: "上班族", entrepreneur: "创业者",
+                   unemployed: "待业", retired: "退休"}[s.career] || s.career,
+    married: s.married, children: s.children, owns_home: s.ownsHome,
+    wealth: s.wealth, final_happiness: s.happiness,
+    timeline, turning_points: turningPoints,
+  };
+}
+
+/* ---------------------------- 页面交互 ---------------------------- */
+const $ = id => document.getElementById(id);
+let seedOffset = 0;
+
+$("story").addEventListener("input", () => {
+  $("charCount").textContent = $("story").value.length + " 字";
+});
+
+function inputs() {
+  return {
+    story: $("story").value,
+    age: parseInt($("age").value, 10) || undefined,
+    gender: $("gender").value || undefined,
+  };
+}
+function esc(s) {
+  return String(s).replace(/[&<>"]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c]));
+}
+function bar(label, val, evidenceHtml) {
+  return `<div class="bar-row"><span class="bar-label">${esc(label)}</span>` +
+    `<div class="bar-track"><div class="bar-fill" style="width:${val}%"></div></div>` +
+    `<span class="bar-num">${val}</span></div>${evidenceHtml || ""}`;
+}
+function renderProfile(p) {
+  let html = "";
+  for (const [dim, score] of Object.entries(p.big_five)) {
+    const evs = (p.big_five_evidence[dim] || []).slice(0, 3);
+    let evHtml = "";
+    if (evs.length) {
+      const parts = evs.map(e => `<em>${esc(e.keyword)}</em>(${e.weight > 0 ? "+" : ""}${e.weight}×${e.count})`);
+      evHtml = `<div class="evidence">依据: ${parts.join("、 ")}</div>`;
+    }
+    html += bar(p.big_five_names[dim] || dim, score, evHtml);
+  }
+  html += `<div style="margin-top:14px">`;
+  for (const [k, v] of Object.entries(p.values).sort((a, b) => b[1] - a[1])) {
+    if (v > 0) html += `<span class="tag">${esc(p.value_names[k])} <b>${v}%</b></span>`;
+  }
+  html += `<span class="tag">依恋风格 <b>${esc(p.attachment_name)}</b></span>`;
+  html += `<span class="tag">年龄 <b>${p.age}</b> <span style="font-size:11px">(${esc(p.age_source)})</span></span>`;
+  if (p.gender) html += `<span class="tag">性别 <b>${p.gender === "male" ? "男" : "女"}</b></span>`;
+  html += `</div>`;
+  const factKeys = Object.keys(p.facts || {});
+  if (factKeys.length) {
+    html += `<div style="margin-top:14px" class="hint">从你的故事里读到的生平线索：</div>`;
+    for (const k of factKeys) {
+      html += `<div class="evidence" style="margin-left:0">· ${esc(p.fact_names[k])}: ${p.facts[k].slice(0, 3).map(esc).join(" / ")}</div>`;
+    }
+  }
+  html += `<div class="conf-note">侧写置信度 <b>${p.confidence}%</b>（细节密度 ${p.detail_score}%，全文 ${p.text_length} 字）。` +
+    (p.confidence < 50 ? "故事还比较简略——补充具体的时间、事件和感受，画像会明显更准。"
+                       : "细节相当充分，画像已具备较强的个人特征。") + `</div>`;
+  $("profileBody").innerHTML = html;
+  $("profilePanel").style.display = "";
+}
+function renderSim(sim) {
+  const lines = [];
+  for (const entry of sim.timeline) {
+    for (const ev of entry.events) {
+      let cls = "";
+      if (ev.includes("终点")) cls = "death";
+      else if (sim.turning_points.some(t => t.endsWith(ev))) cls = "turning";
+      lines.push(`<span class="year-age">${entry.year} · ${entry.age}岁</span>  <span class="${cls}">${esc(ev)}</span>`);
+    }
+  }
+  $("timeline").innerHTML = lines.join("\n");
+  let out = `<div class="summary-line">—— 模拟结束 ——</div>`;
+  out += `<div>享年 ${sim.final_age} 岁` +
+    (sim.death_cause ? `（${esc(sim.death_cause)}）` : "（模拟至此为止，人还健在）") + `。` +
+    `最终身份：${esc(sim.career_final)}；` + (sim.married ? "已婚" : "未婚") +
+    `，${sim.children} 个孩子` + (sim.owns_home ? "，有自己的房子" : "") + `。` +
+    `晚年幸福感 ${sim.final_happiness}/100。</div>`;
+  if (sim.turning_points.length) {
+    out += `<div style="margin-top:10px" class="hint">人生关键转折点：</div>`;
+    for (const t of sim.turning_points) out += `<div class="turning">★ ${esc(t)}</div>`;
+  }
+  $("summary").innerHTML = out;
+  $("simPanel").style.display = "";
+  $("btnReplay").style.display = "";
+}
+function validate(story) {
+  if (story.trim().length < 30) {
+    $("err").textContent = "请至少写 30 个字的人生经历——写得越详细，模拟越像你。";
+    return false;
+  }
+  $("err").textContent = "";
+  return true;
+}
+$("btnProfile").addEventListener("click", () => {
+  const inp = inputs();
+  if (!validate(inp.story)) return;
+  renderProfile(buildProfile(inp.story, inp));
+});
+function runSim(offset) {
+  const inp = inputs();
+  if (!validate(inp.story)) return;
+  const profile = buildProfile(inp.story, inp);
+  renderProfile(profile);
+  $("simMeta").textContent = offset === 0
+    ? "主世界线（同一段经历总是重演出同一条轨迹）"
+    : `平行世界 #${offset}（同样的你，不同的运气）`;
+  renderSim(simulate(profile, inp.story, offset));
+  $("simPanel").scrollIntoView({behavior: "smooth"});
+}
+$("btnSim").addEventListener("click", () => { seedOffset = 0; runSim(0); });
+$("btnReplay").addEventListener("click", () => { seedOffset++; runSim(seedOffset); });
+</script>

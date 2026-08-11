@@ -41,7 +41,10 @@ life_sim/
 │   ├── distill.py       # 蒸馏器：清洗→去隐私→分类→事件模板
 │   └── run.py           # 命令行入口（python3 -m crawler.run）
 ├── data/events.json     # 事件语料库（种子 41 条，爬虫持续追加）
-├── static/index.html    # 文字版页面（终端风格）
+├── static/
+│   ├── index.html       # 文字版页面（终端风格，调用后端 API）
+│   └── standalone.html  # 单机版：引擎完整移植为 JS，双击即玩，零后端
+
 ├── deploy/
 │   ├── setup_gcp.sh     # 谷歌云一键部署脚本
 │   └── lifesim.service  # systemd 服务
