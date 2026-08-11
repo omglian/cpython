@@ -25,6 +25,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from engine import build_profile, simulate  # noqa: E402
+from engine.events import load_corpus  # noqa: E402
 
 STATIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
 MAX_BODY = 512 * 1024  # 单次请求最大 512KB，足够放一篇很长的自传
@@ -84,7 +85,8 @@ class Handler(BaseHTTPRequestHandler):
             except OSError:
                 self._send(500, {"error": "页面文件缺失"})
         elif self.path == "/api/health":
-            self._send(200, {"ok": True, "service": "life-replay"})
+            self._send(200, {"ok": True, "service": "life-replay",
+                             "event_corpus": len(load_corpus())})
         else:
             self._send(404, {"error": "not found"})
 

@@ -33,12 +33,19 @@ life_sim/
 ├── engine/
 │   ├── lexicon.py       # 心理学词典：语言信号 → 量表维度
 │   ├── profiler.py      # 人物侧写引擎：文本 → 心理画像(JSON)
+│   ├── events.py        # 事件语料库：加载/校验/按人格加权抽取(热加载)
 │   └── simulation.py    # 人生模拟引擎：画像 → 逐年人生轨迹
+├── crawler/             # 事件语料采集管线（喂大模拟的随机事件池）
+│   ├── fetch.py         # 礼貌抓取器：robots.txt + 限速
+│   ├── sources.py       # 来源适配器：HN 官方 API / RSS / 本地导入
+│   ├── distill.py       # 蒸馏器：清洗→去隐私→分类→事件模板
+│   └── run.py           # 命令行入口（python3 -m crawler.run）
+├── data/events.json     # 事件语料库（种子 41 条，爬虫持续追加）
 ├── static/index.html    # 文字版页面（终端风格）
 ├── deploy/
 │   ├── setup_gcp.sh     # 谷歌云一键部署脚本
 │   └── lifesim.service  # systemd 服务
-└── tests.py             # 冒烟测试（python3 tests.py）
+└── tests.py             # 测试套件（python3 tests.py）
 ```
 
 ## 本地运行
@@ -91,9 +98,31 @@ gcloud compute instances add-tags <实例名> --tags=lifesim --zone=<可用区>
   调制恋爱建立、分手与离婚概率及其叙事。
 * **生平事实抽取**：年龄/出生年、学历、职业、婚育等硬事实决定模拟起点。
 
+## 事件语料采集（crawler）
+
+模拟中的"随机事件"来自 `data/events.json` 语料库——由真实网络语料
+蒸馏而成，事件按年龄过滤、按人格加权抽取（如高开放性的人更容易触发
+"捡起爱好"类事件），服务器按文件 mtime 热加载，爬虫更新后无需重启。
+
+```bash
+cd life_sim
+python3 -m crawler.run hn --limit 50            # Hacker News 官方公开 API
+python3 -m crawler.run rss --url <feed地址>      # 任意 RSS/Atom 源
+python3 -m crawler.run import --file 留言.txt    # 本地导入(txt/csv/jsonl)
+python3 -m crawler.run stats                     # 语料库统计
+```
+
+在谷歌云 VM 上可配 cron 每日自动采集（部署脚本末尾有现成配置）。
+
+**合规边界（刻意为之）**：只用官方公开 API 和 RSS、遵守 robots.txt、
+限速抓取；不绕过任何登录墙——微博/知乎等无公开 API 的平台，请把你
+自己有权导出的数据用"本地导入"喂进来。蒸馏时强制清除 @用户名、链接、
+邮箱、手机号、微信/QQ 号等隐私信息，并把叙述改写为第二人称。
+
 ## 路线图
 
 - [x] v0.1 文字版页面 + 规则侧写 + 逐年模拟（本版本）
+- [x] v0.1.1 事件语料采集管线 + 语料驱动的随机事件
 - [ ] v0.2 LLM 侧写器（同一 `build_profile` 接口，深度理解长篇自传）
 - [ ] v0.3 交互式决策点（岔路口暂停，玩家可选"顺着我的性格"或亲自选）
 - [ ] v0.4 像素风 2D 渲染层（文字引擎不变，前端替换为 2D 场景）

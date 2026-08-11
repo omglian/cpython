@@ -20,7 +20,12 @@ fi
 
 echo "==> 复制项目到 $DEST_DIR"
 mkdir -p "$DEST_DIR"
-cp -r "$SRC_DIR/server.py" "$SRC_DIR/engine" "$SRC_DIR/static" "$DEST_DIR/"
+cp -r "$SRC_DIR/server.py" "$SRC_DIR/engine" "$SRC_DIR/static" \
+      "$SRC_DIR/crawler" "$DEST_DIR/"
+# 语料库只在首次部署时初始化，之后由爬虫持续追加，更新部署不覆盖
+if [ ! -f "$DEST_DIR/data/events.json" ]; then
+    cp -r "$SRC_DIR/data" "$DEST_DIR/"
+fi
 chown -R www-data:www-data "$DEST_DIR"
 
 echo "==> 安装 systemd 服务"
@@ -49,4 +54,13 @@ cat <<'EOF'
 然后访问  http://<VM外网IP>:8080/
 日志查看:  sudo journalctl -u lifesim -f
 更新代码:  重新执行本脚本即可
+
+可选：开启事件语料自动采集（每天从合规来源补充游戏事件，服务器热加载）:
+
+  sudo tee /etc/cron.d/lifesim-crawler >/dev/null <<'CRON'
+0 3 * * * www-data cd /opt/life_sim && python3 -m crawler.run hn --limit 60 >> /var/log/lifesim-crawler.log 2>&1
+CRON
+
+导入你自己导出的平台留言(txt/csv/jsonl):
+  cd /opt/life_sim && sudo -u www-data python3 -m crawler.run import --file 你的文件.txt
 EOF

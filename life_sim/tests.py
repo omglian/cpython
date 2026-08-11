@@ -1,9 +1,13 @@
 # -*- coding: utf-8 -*-
 """life_sim 冒烟测试：python3 tests.py 直接运行，全绿即通过。"""
 
+import os
+import tempfile
 import unittest
 
 from engine import build_profile, simulate
+from engine.events import load_corpus, draw
+from crawler import distill
 
 STORY_RICH = (
     "我1995年出生在一个小县城，父母都是老师。小时候我很内向，不爱说话，"
@@ -98,6 +102,105 @@ class TestSimulation(unittest.TestCase):
             self.assertGreaterEqual(sim.wealth, 0)
             year += 1
             sim.age += 1
+
+
+class TestEventCorpus(unittest.TestCase):
+
+    def test_default_corpus_loads_and_validates(self):
+        corpus = load_corpus()
+        self.assertGreater(len(corpus), 20, "种子语料库应至少有 20+ 条事件")
+        for ev in corpus:
+            self.assertIn("id", ev)
+            self.assertIn("text", ev)
+
+    def test_invalid_events_filtered(self):
+        with tempfile.NamedTemporaryFile(
+                "w", suffix=".json", delete=False, encoding="utf-8") as f:
+            f.write('[{"id":"a","text":"好事","domain":"misc"},'
+                    '{"id":"b","text":"坏域","domain":"nope"},'
+                    '{"text":"没有id","domain":"misc"}]')
+            path = f.name
+        try:
+            corpus = load_corpus(path)
+            self.assertEqual([ev["id"] for ev in corpus], ["a"])
+        finally:
+            os.unlink(path)
+
+    def test_draw_respects_age(self):
+        import random
+        corpus = [
+            {"id": "young", "text": "y", "domain": "misc",
+             "min_age": 15, "max_age": 20, "weight": 1.0},
+            {"id": "old", "text": "o", "domain": "misc",
+             "min_age": 60, "max_age": 90, "weight": 1.0},
+        ]
+        rng = random.Random(1)
+        traits = {"O": 50, "C": 50, "E": 50, "A": 50, "N": 50}
+        for _ in range(10):
+            self.assertEqual(draw(rng, corpus, 18, traits)["id"], "young")
+            self.assertEqual(draw(rng, corpus, 70, traits)["id"], "old")
+        self.assertIsNone(draw(rng, corpus, 40, traits))
+
+    def test_trait_bias_shifts_odds(self):
+        import random
+        corpus = [
+            {"id": "open", "text": "x", "domain": "misc",
+             "min_age": 0, "max_age": 100, "weight": 1.0,
+             "trait_bias": {"O": 1.0}},
+            {"id": "flat", "text": "x", "domain": "misc",
+             "min_age": 0, "max_age": 100, "weight": 1.0},
+        ]
+        rng = random.Random(7)
+        high_o = {"O": 100, "C": 50, "E": 50, "A": 50, "N": 50}
+        hits = sum(1 for _ in range(500)
+                   if draw(rng, corpus, 30, high_o)["id"] == "open")
+        # 高开放性时 open 权重 2.0 vs 1.0，应显著多于一半
+        self.assertGreater(hits, 280)
+
+    def test_simulation_with_corpus_deterministic(self):
+        profile = build_profile(STORY_RICH, current_year=2026)
+        corpus = load_corpus()
+        a = simulate(profile, seed_text=STORY_RICH, start_year=2026,
+                     corpus=corpus)
+        b = simulate(profile, seed_text=STORY_RICH, start_year=2026,
+                     corpus=corpus)
+        self.assertEqual(a, b)
+
+
+class TestDistill(unittest.TestCase):
+
+    def test_pii_scrubbed(self):
+        raw = ("我今天很难过，加我微信 abc12345 聊聊，"
+               "或打 13812345678，主页 https://example.com/u/9 @小明")
+        ev = distill.distill(raw)
+        self.assertIsNotNone(ev)
+        for leak in ("abc12345", "13812345678", "example.com", "@小明"):
+            self.assertNotIn(leak, ev["text"], "隐私信息必须被清除: %s" % leak)
+
+    def test_first_person_converted(self):
+        ev = distill.distill("我在深夜的办公室里加班，觉得很孤独很想家")
+        self.assertIsNotNone(ev)
+        self.assertIn("你", ev["text"])
+        self.assertNotIn("我", ev["text"])
+
+    def test_third_person_wrapped(self):
+        ev = distill.distill("成年人的崩溃都是从借钱开始的")
+        self.assertIsNotNone(ev)
+        self.assertIn("留言", ev["text"])
+
+    def test_length_filter(self):
+        self.assertIsNone(distill.distill("太短"))
+        self.assertIsNone(distill.distill("长" * 300))
+
+    def test_domain_and_valence(self):
+        ev = distill.distill("我失业了三个月，每天投简历都石沉大海，真的很绝望")
+        self.assertEqual(ev["domain"], "career")
+        self.assertLess(ev["valence"], 0)
+
+    def test_dedupe(self):
+        items = [("t", "我今天加班到凌晨真的好累好想辞职"),
+                 ("t", "我今天加班到凌晨真的好累好想辞职")]
+        self.assertEqual(len(distill.distill_all(items)), 1)
 
 
 if __name__ == "__main__":

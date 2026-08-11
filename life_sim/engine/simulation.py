@@ -19,6 +19,8 @@
 import hashlib
 import random
 
+from . import events as events_mod
+
 
 # ---------------------------------------------------------------------------
 # 工具
@@ -58,8 +60,10 @@ class _Narrator:
 class LifeSimulation:
 
     def __init__(self, profile, seed_text="", seed_offset=0,
-                 start_year=2026):
+                 start_year=2026, corpus=None):
         self.p = profile
+        # 事件语料库（crawler 管线持续补充）；None 时按默认路径加载
+        self.corpus = events_mod.load_corpus() if corpus is None else corpus
         digest = hashlib.sha256(
             (seed_text + "#%d" % seed_offset).encode("utf-8")
         ).hexdigest()
@@ -420,6 +424,25 @@ class LifeSimulation:
     # 低频随机事件
     # ------------------------------------------------------------------
     def tick_random_events(self, year):
+        # 语料库事件：真实网络语料蒸馏而来，按年龄过滤、按人格加权抽取
+        if self.corpus and self.choose(0.30):
+            ev = events_mod.draw(
+                self.rng, self.corpus, self.age,
+                {"O": self.O, "C": self.C, "E": self.E,
+                 "A": self.A, "N": self.N})
+            if ev:
+                self.n.log(year, self.age, ev["text"])
+                effects = ev.get("effects", {})
+                self.happiness = _clamp(
+                    self.happiness + effects.get("happiness", 0), 0, 100)
+                self.stress = _clamp(
+                    self.stress + effects.get("stress", 0), 0, 100)
+                self.health = _clamp(
+                    self.health + effects.get("health", 0), 0, 100)
+                self.wealth = max(0, self.wealth + effects.get("wealth", 0))
+                return
+
+        # 内置兜底小事件（语料库缺失时也能玩）
         roll = self.rng.random()
         if roll < 0.02 * _trait_factor(self.E, 0.1):
             self.n.log(year, self.age, "一位老朋友重新回到你的生活里，你们聊了整晚。")
@@ -454,8 +477,9 @@ class LifeSimulation:
 
 
 def simulate(profile, seed_text="", seed_offset=0, start_year=2026,
-             max_years=100):
+             max_years=100, corpus=None):
     """便捷入口：构建并运行一次完整模拟。"""
     sim = LifeSimulation(profile, seed_text=seed_text,
-                         seed_offset=seed_offset, start_year=start_year)
+                         seed_offset=seed_offset, start_year=start_year,
+                         corpus=corpus)
     return sim.run(max_years=max_years)

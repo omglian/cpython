@@ -1,0 +1,169 @@
+# -*- coding: utf-8 -*-
+"""蒸馏器：把原始留言/帖子转成游戏事件模板。
+
+流程：清洗 → 去隐私(强制) → 长度过滤 → 领域分类 → 情感定价 →
+      人称改写 → 生成事件模板(dict)。
+
+事件模板 schema（engine/events.py 负责校验与抽取）：
+    id          文本规范化后的哈希，天然去重
+    text        第二人称叙事文本
+    domain      career/romance/family/health/finance/growth/social/misc
+    valence     -2..+2 情感强度（决定默认幸福度影响）
+    min_age/max_age  适用年龄段
+    weight      抽取权重
+    trait_bias  可选 {"O":0.3,...} 人格调制（正=该特质高更易发生）
+    effects     可选 {"happiness":+4,"stress":-2,...} 状态影响
+    source      来源标签
+"""
+
+import hashlib
+import re
+
+# ---------------------------------------------------------------------------
+# 去隐私（顺序敏感：先长模式后短模式）
+# ---------------------------------------------------------------------------
+
+_PII_PATTERNS = [
+    re.compile(r"https?://\S+|www\.\S+"),                       # 链接
+    re.compile(r"[\w.+-]+@[\w-]+\.[\w.]+"),                     # 邮箱
+    re.compile(r"(?:微信|weixin|wx|vx|qq|QQ)[号:：\s]*[A-Za-z0-9_-]{5,}"),  # 社交号
+    re.compile(r"1[3-9]\d{9}"),                                 # 手机号
+    re.compile(r"@[\w一-鿿.-]+"),                       # @用户名
+    re.compile(r"\d{15,}"),                                     # 超长数字串
+]
+
+
+def scrub_pii(text):
+    for pat in _PII_PATTERNS:
+        text = pat.sub("", text)
+    return text
+
+
+def clean(text):
+    text = scrub_pii(str(text))
+    text = re.sub(r"\s+", " ", text).strip()
+    return text
+
+
+# ---------------------------------------------------------------------------
+# 领域分类与情感定价（关键词启发式，中英文混合）
+# ---------------------------------------------------------------------------
+
+_DOMAIN_KEYWORDS = {
+    "career": ["工作", "上班", "老板", "同事", "加班", "裁员", "离职", "跳槽",
+               "创业", "面试", "工资", "失业", "求职", "简历", "职场", "实习",
+               "job", "work", "boss", "career", "startup", "quit", "fired",
+               "interview", "resume", "layoff"],
+    "romance": ["恋爱", "分手", "结婚", "离婚", "相亲", "喜欢的人", "前任",
+                "对象", "爱情", "love", "girlfriend", "boyfriend", "marriage",
+                "divorce", "date"],
+    "family": ["父母", "爸妈", "孩子", "女儿", "儿子", "老家", "家人", "爷爷",
+               "奶奶", "亲戚", "family", "parents", "kids", "mom", "dad"],
+    "health": ["生病", "住院", "体检", "失眠", "抑郁", "焦虑", "健身", "锻炼",
+               "医生", "health", "sick", "hospital", "sleep", "anxiety",
+               "depression", "gym"],
+    "finance": ["房租", "房贷", "买房", "存款", "工资", "欠债", "省钱", "涨价",
+                "股票", "基金", "money", "rent", "mortgage", "salary", "debt",
+                "invest"],
+    "growth": ["学习", "读书", "考试", "自学", "课程", "毕业", "技能", "书",
+               "learn", "study", "book", "course", "skill", "graduate"],
+    "social": ["朋友", "聚会", "同学", "邻居", "网友", "孤独", "社交",
+               "friend", "party", "lonely", "social", "neighbor"],
+}
+
+_POS_WORDS = ["开心", "幸福", "感动", "温暖", "惊喜", "美好", "顺利", "成功",
+              "感谢", "治愈", "满足", "happy", "great", "love", "wonderful",
+              "amazing", "grateful", "success"]
+_NEG_WORDS = ["难过", "崩溃", "失望", "痛苦", "后悔", "失败", "焦虑", "孤独",
+              "累", "哭", "绝望", "委屈", "sad", "fail", "tired", "regret",
+              "terrible", "cry", "lost", "worst"]
+
+_AGE_HINTS = [
+    (["高中", "高考", "school", "teenager"], (15, 20)),
+    (["大学", "毕业", "college", "campus"], (18, 26)),
+    (["实习", "第一份工作", "first job"], (20, 28)),
+    (["退休", "养老", "retire"], (55, 90)),
+    (["孩子上学", "带娃", "kids school"], (28, 48)),
+]
+
+
+def classify_domain(text):
+    lowered = text.lower()
+    best, best_hits = "misc", 0
+    for domain, words in _DOMAIN_KEYWORDS.items():
+        hits = sum(1 for w in words if w in lowered)
+        if hits > best_hits:
+            best, best_hits = domain, hits
+    return best
+
+
+def score_valence(text):
+    lowered = text.lower()
+    pos = sum(1 for w in _POS_WORDS if w in lowered)
+    neg = sum(1 for w in _NEG_WORDS if w in lowered)
+    return max(-2, min(2, pos - neg))
+
+
+def guess_age_range(text):
+    for words, rng in _AGE_HINTS:
+        if any(w in text for w in words):
+            return rng
+    return (16, 75)
+
+
+# ---------------------------------------------------------------------------
+# 人称改写：以"我"开头的叙述改为"你"；否则包装成"刷到留言"氛围事件
+# ---------------------------------------------------------------------------
+
+def to_second_person(text):
+    if re.match(r"^(我|我们)", text) or " I " in " %s " % text:
+        converted = text.replace("我们", "你们").replace("我", "你")
+        converted = re.sub(r"\bI\b", "you", converted)
+        return converted, True
+    wrapped = "你刷到一条陌生人的留言：「%s」，恍惚间想到了自己的生活。" % text
+    return wrapped, False
+
+
+# ---------------------------------------------------------------------------
+# 主入口
+# ---------------------------------------------------------------------------
+
+MIN_LEN, MAX_LEN = 8, 160
+
+
+def distill(raw_text, source="import"):
+    """单条原始文本 → 事件模板 dict；不合格返回 None。"""
+    text = clean(raw_text)
+    if not (MIN_LEN <= len(text) <= MAX_LEN):
+        return None
+    domain = classify_domain(text)
+    valence = score_valence(text)
+    min_age, max_age = guess_age_range(text)
+    narrative, direct = to_second_person(text)
+
+    event = {
+        "id": "evt_" + hashlib.sha256(
+            re.sub(r"\W+", "", text.lower()).encode("utf-8")).hexdigest()[:12],
+        "text": narrative,
+        "domain": domain,
+        "valence": valence,
+        "min_age": min_age,
+        "max_age": max_age,
+        # 直接叙事(亲历感)权重高于氛围事件(刷到留言)
+        "weight": 1.0 if direct else 0.5,
+        "effects": {"happiness": valence * 3,
+                    "stress": -valence * 2 if valence else 1},
+        "source": source,
+    }
+    return event
+
+
+def distill_all(items):
+    """(source, text) 迭代器 → 去重后的事件列表。"""
+    seen, out = set(), []
+    for source, raw in items:
+        ev = distill(raw, source=source)
+        if ev and ev["id"] not in seen:
+            seen.add(ev["id"])
+            out.append(ev)
+    return out
