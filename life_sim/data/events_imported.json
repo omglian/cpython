@@ -75253,5 +75253,35 @@
    "stress": 1
   },
   "source": "funny"
+ },
+ {
+  "id": "evt_bdc76f679da3",
+  "text": "你刷到一条陌生人的留言：「众星因你，皆降为尘」，恍惚间想到了自己的生活。",
+  "domain": "misc",
+  "valence": 0,
+  "min_age": 16,
+  "max_age": 75,
+  "kind": "ambient",
+  "weight": 0.5,
+  "effects": {
+   "happiness": 0,
+   "stress": 1
+  },
+  "source": "net"
+ },
+ {
+  "id": "evt_0bca08278487",
+  "text": "深夜的评论区里，一句话停住了你的拇指：「乐正司百曲，绫动万年红」。",
+  "domain": "misc",
+  "valence": 0,
+  "min_age": 16,
+  "max_age": 75,
+  "kind": "ambient",
+  "weight": 0.5,
+  "effects": {
+   "happiness": 0,
+   "stress": 1
+  },
+  "source": "net"
  }
 ]
