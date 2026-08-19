@@ -75283,5 +75283,260 @@
    "stress": 1
   },
   "source": "net"
+ },
+ {
+  "id": "evt_e891ecedfe59",
+  "text": "你在旧笔记本的扉页看到自己抄过的一句话：「生命瞬间定格在脑海，我将背后的时间裁剪、折叠、蜷曲，揉捻成天上朵朵白云」，已经想不起是什么时候抄的了。",
+  "domain": "misc",
+  "valence": 0,
+  "min_age": 16,
+  "max_age": 75,
+  "kind": "ambient",
+  "weight": 0.5,
+  "effects": {
+   "happiness": 0,
+   "stress": 1
+  },
+  "source": "literature"
+ },
+ {
+  "id": "evt_378ee7e4923a",
+  "text": "朋友转发来一句话：「只有薄雾间的山水，面纱下的女子，那恰到好处的朦胧，才能满足我对美的苛求」。你回了个表情，心里却记下了。",
+  "domain": "misc",
+  "valence": 1,
+  "min_age": 16,
+  "max_age": 75,
+  "kind": "ambient",
+  "weight": 0.5,
+  "effects": {
+   "happiness": 3,
+   "stress": -2
+  },
+  "source": "literature"
+ },
+ {
+  "id": "evt_a6f86144550c",
+  "text": "你在旧笔记本的扉页看到自己抄过的一句话：「曾经的日子无法重来，我不过是个过客。但我仍渴望在追忆之旅中驻足，瞭望过去的自己，感受甜蜜」，已经想不起是什么时候抄的了。",
+  "domain": "misc",
+  "valence": 0,
+  "min_age": 16,
+  "max_age": 75,
+  "kind": "ambient",
+  "weight": 0.5,
+  "effects": {
+   "happiness": 0,
+   "stress": 1
+  },
+  "source": "literature"
+ },
+ {
+  "id": "evt_36a93b82f6c9",
+  "text": "朋友转发来一句话：「美好的时光曾流过我的身体，我便心满意足」。你回了个表情，心里却记下了。",
+  "domain": "misc",
+  "valence": 1,
+  "min_age": 16,
+  "max_age": 75,
+  "kind": "ambient",
+  "weight": 0.5,
+  "effects": {
+   "happiness": 3,
+   "stress": -2
+  },
+  "source": "literature"
+ },
+ {
+  "id": "evt_dba40c175b22",
+  "text": "深夜的评论区里，一句话停住了你的拇指：「过去已经凝固，我带着回忆向前，回忆却时常改变形态，给追忆带来挑战」。",
+  "domain": "misc",
+  "valence": 0,
+  "min_age": 16,
+  "max_age": 75,
+  "kind": "ambient",
+  "weight": 0.5,
+  "effects": {
+   "happiness": 0,
+   "stress": 1
+  },
+  "source": "literature"
+ },
+ {
+  "id": "evt_b4cf617b56e6",
+  "text": "深夜的评论区里，一句话停住了你的拇指：「我该在哪里停留？我问我自己」。",
+  "domain": "misc",
+  "valence": 0,
+  "min_age": 16,
+  "max_age": 75,
+  "kind": "ambient",
+  "weight": 0.5,
+  "effects": {
+   "happiness": 0,
+   "stress": 1
+  },
+  "source": "literature"
+ },
+ {
+  "id": "evt_c813367c6702",
+  "text": "你刷到一条陌生人的留言：「星图铺就的，未必是归途。但有人循着它，便不算迷路」，恍惚间想到了自己的生活。",
+  "domain": "misc",
+  "valence": 0,
+  "min_age": 16,
+  "max_age": 75,
+  "kind": "ambient",
+  "weight": 0.5,
+  "effects": {
+   "happiness": 0,
+   "stress": 1
+  },
+  "source": "literature"
+ },
+ {
+  "id": "evt_5e6628891ebe",
+  "text": "朋友转发来一句话：「追忆总在不经意间将我裹进泛黄的纸页里」。你回了个表情，心里却记下了。",
+  "domain": "misc",
+  "valence": 0,
+  "min_age": 16,
+  "max_age": 75,
+  "kind": "ambient",
+  "weight": 0.5,
+  "effects": {
+   "happiness": 0,
+   "stress": 1
+  },
+  "source": "original"
+ },
+ {
+  "id": "evt_5aea6d141d01",
+  "text": "地铁上你瞥见邻座手机屏幕上的一句签名：「我有一个小小的梦在田野飞奔」。到站了你还在想。",
+  "domain": "misc",
+  "valence": 0,
+  "min_age": 16,
+  "max_age": 75,
+  "kind": "ambient",
+  "weight": 0.5,
+  "effects": {
+   "happiness": 0,
+   "stress": 1
+  },
+  "source": "net"
+ },
+ {
+  "id": "evt_9ab75515dd97",
+  "text": "歌单随机到一首老歌，热评第一写着：「故事还在你的眼眸，我倾其所有」。你单曲循环了一晚上。",
+  "domain": "misc",
+  "valence": 0,
+  "min_age": 16,
+  "max_age": 75,
+  "kind": "ambient",
+  "weight": 0.5,
+  "effects": {
+   "happiness": 0,
+   "stress": 1
+  },
+  "source": "net"
+ },
+ {
+  "id": "evt_91b2805f5aab",
+  "text": "你在旧笔记本的扉页看到自己抄过的一句话：「意识沉落在无边的混沌之中，许多印象交错重叠，在脑海里反复盘旋」，已经想不起是什么时候抄的了。",
+  "domain": "misc",
+  "valence": 0,
+  "min_age": 16,
+  "max_age": 75,
+  "kind": "ambient",
+  "weight": 0.5,
+  "effects": {
+   "happiness": 0,
+   "stress": 1
+  },
+  "source": "net"
+ },
+ {
+  "id": "evt_22f2787e1dd9",
+  "text": "你刷到一条陌生人的留言：「有些感受真切无比，可我已经分不清，哪些才是属于原本的我的印记」，恍惚间想到了自己的生活。",
+  "domain": "misc",
+  "valence": 0,
+  "min_age": 16,
+  "max_age": 75,
+  "kind": "ambient",
+  "weight": 0.5,
+  "effects": {
+   "happiness": 0,
+   "stress": 1
+  },
+  "source": "net"
+ },
+ {
+  "id": "evt_fbdb1dfae401",
+  "text": "你刷到一条陌生人的留言：「认知宛如幻梦，看得太透彻便容易偏执，过于朦胧又会陷入迷茫。唯有隔着一层薄雾凝望，才有机会触碰到埋藏深处的真相」，恍惚间想到了自己的生活。",
+  "domain": "misc",
+  "valence": 0,
+  "min_age": 16,
+  "max_age": 75,
+  "kind": "ambient",
+  "weight": 0.5,
+  "effects": {
+   "happiness": 0,
+   "stress": 1
+  },
+  "source": "net"
+ },
+ {
+  "id": "evt_a3dd76487cce",
+  "text": "你刷到一条陌生人的留言：「无数细碎的线索在思绪之中浮沉，我试图循着仅存的表象逆流回溯。如今所见只是加工过后的结果，真正的本体早已隐匿不见」，恍惚间想到了自己的生活。",
+  "domain": "misc",
+  "valence": 0,
+  "min_age": 16,
+  "max_age": 75,
+  "kind": "ambient",
+  "weight": 0.5,
+  "effects": {
+   "happiness": 0,
+   "stress": 1
+  },
+  "source": "net"
+ },
+ {
+  "id": "evt_e9c2e06c2592",
+  "text": "歌单随机到一首老歌，热评第一写着：「我只是一个站在表象之外的旁观者，不断拼凑碎片，盼望能够寻回真实的自我」。你单曲循环了一晚上。",
+  "domain": "misc",
+  "valence": 0,
+  "min_age": 16,
+  "max_age": 75,
+  "kind": "ambient",
+  "weight": 0.5,
+  "effects": {
+   "happiness": 0,
+   "stress": 1
+  },
+  "source": "net"
+ },
+ {
+  "id": "evt_bbc411d497bb",
+  "text": "歌单随机到一首老歌，热评第一写着：「表象不会说谎，可表象也不是真相」。你单曲循环了一晚上。",
+  "domain": "misc",
+  "valence": 0,
+  "min_age": 16,
+  "max_age": 75,
+  "kind": "ambient",
+  "weight": 0.5,
+  "effects": {
+   "happiness": 0,
+   "stress": 1
+  },
+  "source": "net"
+ },
+ {
+  "id": "evt_204030895617",
+  "text": "深夜的评论区里，一句话停住了你的拇指：「这份错位，给我的寻觅平添重重阻碍。我到底是谁」。",
+  "domain": "misc",
+  "valence": 0,
+  "min_age": 16,
+  "max_age": 75,
+  "kind": "ambient",
+  "weight": 0.5,
+  "effects": {
+   "happiness": 0,
+   "stress": 1
+  },
+  "source": "net"
  }
 ]
