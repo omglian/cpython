@@ -75538,5 +75538,20 @@
    "stress": 1
   },
   "source": "net"
+ },
+ {
+  "id": "evt_08a5f09cc91a",
+  "text": "地铁上你瞥见邻座手机屏幕上的一句签名：「如果你看见一面墙，往上往下往左往右都看不到尽头，永远抵达不了边界。那就是死亡」。到站了你还在想。",
+  "domain": "misc",
+  "valence": 0,
+  "min_age": 16,
+  "max_age": 75,
+  "kind": "ambient",
+  "weight": 0.5,
+  "effects": {
+   "happiness": 0,
+   "stress": 1
+  },
+  "source": "literature"
  }
 ]
