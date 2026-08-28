@@ -75553,5 +75553,95 @@
    "stress": 1
   },
   "source": "literature"
+ },
+ {
+  "id": "evt_307d58e21772",
+  "text": "你刷到一条陌生人的留言：「忘你不舍，寻你不休」，恍惚间想到了自己的生活。",
+  "domain": "misc",
+  "valence": 0,
+  "min_age": 16,
+  "max_age": 75,
+  "kind": "ambient",
+  "weight": 0.5,
+  "effects": {
+   "happiness": 0,
+   "stress": 1
+  },
+  "source": "net"
+ },
+ {
+  "id": "evt_8d22e04df9dd",
+  "text": "朋友转发来一句话：「天命碧城灰土，刀弓褐锈」。你回了个表情，心里却记下了。",
+  "domain": "misc",
+  "valence": 0,
+  "min_age": 16,
+  "max_age": 75,
+  "kind": "ambient",
+  "weight": 0.5,
+  "effects": {
+   "happiness": 0,
+   "stress": 1
+  },
+  "source": "net"
+ },
+ {
+  "id": "evt_f3181421af0b",
+  "text": "深夜的评论区里，一句话停住了你的拇指：「我想要追着山风去寻一个自由」。",
+  "domain": "misc",
+  "valence": 0,
+  "min_age": 16,
+  "max_age": 75,
+  "kind": "ambient",
+  "weight": 0.5,
+  "effects": {
+   "happiness": 0,
+   "stress": 1
+  },
+  "source": "net"
+ },
+ {
+  "id": "evt_1e986482a130",
+  "text": "歌单随机到一首老歌，热评第一写着：「往后随心而活我不再去将就」。你单曲循环了一晚上。",
+  "domain": "misc",
+  "valence": 0,
+  "min_age": 16,
+  "max_age": 75,
+  "kind": "ambient",
+  "weight": 0.5,
+  "effects": {
+   "happiness": 0,
+   "stress": 1
+  },
+  "source": "net"
+ },
+ {
+  "id": "evt_05954d50a252",
+  "text": "朋友转发来一句话：「终日困城中我望着远处高楼」。你回了个表情，心里却记下了。",
+  "domain": "misc",
+  "valence": 0,
+  "min_age": 16,
+  "max_age": 75,
+  "kind": "ambient",
+  "weight": 0.5,
+  "effects": {
+   "happiness": 0,
+   "stress": 1
+  },
+  "source": "net"
+ },
+ {
+  "id": "evt_34156dbd2337",
+  "text": "你刷到一条陌生人的留言：「甩臭汗，丢了爱」，恍惚间想到了自己的生活。",
+  "domain": "misc",
+  "valence": 0,
+  "min_age": 16,
+  "max_age": 75,
+  "kind": "ambient",
+  "weight": 0.5,
+  "effects": {
+   "happiness": 0,
+   "stress": 1
+  },
+  "source": "net"
  }
 ]
